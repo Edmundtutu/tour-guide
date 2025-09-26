@@ -7,8 +7,8 @@ define('DB_PASS', '');
 define('DB_CHARSET', 'utf8mb4');
 
 // Application settings
-define('BASE_URL', 'http://localhost/uganda-tour-guide/public');
-define('APP_NAME', 'Uganda Tour Guide');
+define('BASE_URL', 'http://localhost/tour-guide/public');
+define('APP_NAME', 'Tour Guide');
 
 // Security settings
 define('SESSION_TIMEOUT', 3600); // 1 hour

@@ -59,4 +59,3 @@ class Router {
         return $routePath === $requestPath;
     }
 }
-?>
