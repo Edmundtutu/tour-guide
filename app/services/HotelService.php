@@ -78,8 +78,8 @@ class HotelService {
         return $this->hotelModel->updateStatus($hotelId, 'blocked');
     }
     
-    public function searchHotels($location = null, $priceRange = null) {
-        return $this->hotelModel->searchHotels($location, $priceRange);
+    public function searchHotels($location = null, $priceRange = null, $latitude = null, $longitude = null, $radius = 50) {
+        return $this->hotelModel->searchHotels($location, $priceRange, $latitude, $longitude, $radius);
     }
     
     public function getAvailableHotels() {

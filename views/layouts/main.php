@@ -327,9 +327,18 @@
 
     <!-- JavaScript -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <!-- Leaflet Maps -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="<?= View::asset('js/main.js') ?>"></script>
+    
+    <!-- Global JavaScript Variables -->
+    <script>
+        // Define global variables for JavaScript
+        window.BASE_URL = '<?= BASE_URL ?>';
+        window.APP_NAME = '<?= APP_NAME ?>';
+    </script>
+    
+    <!-- Temporarily disabled main.js to avoid jQuery conflicts -->
+    <!-- <script src="<?= View::asset('js/main.js') ?>"></script> -->
     
     <!-- Additional JavaScript for specific pages -->
     <?php if (isset($additionalJS)): ?>

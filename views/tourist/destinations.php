@@ -65,9 +65,78 @@
                         <button type="button" class="btn btn-outline-success btn-sm" onclick="getCurrentLocationForDestinations()">
                             <i class="fas fa-map-marker-alt me-1"></i>My Location
                         </button>
+                        <button type="button" class="btn btn-outline-info btn-sm" onclick="toggleDestinationsFilterPanel()">
+                            <i class="fas fa-filter me-1"></i>Filters
+                        </button>
                     </div>
                 </div>
-                <div id="destinationsMap" style="height: 400px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"></div>
+                
+                <!-- Map Container with Filter Panel -->
+                <div class="position-relative">
+                    <div id="destinationsMap" style="height: 500px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"></div>
+                    
+                    <!-- Map Filter Panel -->
+                    <div id="destinationsFilterPanel" class="map-filter-panel" style="display: none;">
+                        <h6><i class="fas fa-filter me-2"></i>Destination Filters</h6>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Entry Fee Range</label>
+                            <div class="row">
+                                <div class="col-6">
+                                    <input type="number" class="form-control" id="minEntryFee" placeholder="Min" min="0">
+                                </div>
+                                <div class="col-6">
+                                    <input type="number" class="form-control" id="maxEntryFee" placeholder="Max" min="0">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Show Nearby Hotels</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="showNearbyHotels" onchange="toggleNearbyHotels()">
+                                <label class="form-check-label" for="showNearbyHotels">
+                                    Display hotels near destinations
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Distance (km)</label>
+                            <select class="form-select" id="destinationsRadius" onchange="updateDestinationsFilters()">
+                                <option value="25">25 km</option>
+                                <option value="50" selected>50 km</option>
+                                <option value="100">100 km</option>
+                                <option value="200">200 km</option>
+                            </select>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="button" class="btn btn-primary btn-sm" onclick="applyDestinationsFilters()">
+                                <i class="fas fa-search me-1"></i>Apply Filters
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="clearDestinationsFilters()">
+                                <i class="fas fa-times me-1"></i>Clear All
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Map Legend -->
+                    <div class="map-legend">
+                        <div class="legend-item">
+                            <div class="legend-marker destination-marker"></div>
+                            <span>Destinations</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-marker hotel-marker"></div>
+                            <span>Nearby Hotels</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-marker user-location-marker"></div>
+                            <span>Your Location</span>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -402,9 +471,17 @@ function planVisit(destinationId) {
 </style>
 
 <script>
-// Destinations Map Integration
+// Enhanced Destinations Map Integration
 let destinationsMap;
 let destinationMarkers = [];
+let hotelMarkers = [];
+let userLocationMarker = null;
+let showHotels = false;
+let currentFilters = {
+    minEntryFee: null,
+    maxEntryFee: null,
+    radius: 50
+};
 
 // Initialize destinations map when page loads
 document.addEventListener('DOMContentLoaded', function() {
@@ -412,6 +489,21 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function initializeDestinationsMap() {
+    // Check if Leaflet is available
+    if (typeof L === 'undefined') {
+        console.error('Leaflet library not loaded');
+        return;
+    }
+    
+    // Check if map container exists
+    const mapContainer = document.getElementById('destinationsMap');
+    if (!mapContainer) {
+        console.error('Map container not found');
+        return;
+    }
+    
+    console.log('Initializing destinations map...');
+    
     // Default center (Kampala, Uganda)
     const defaultCenter = [0.3476, 32.5825];
     
@@ -426,40 +518,60 @@ function initializeDestinationsMap() {
     // Add destination markers
     addDestinationMarkersToMap();
     
-    // Add nearby hotels
-    addNearbyHotelsToMap();
+    // Fit map to show all markers
+    setTimeout(fitDestinationsMapToMarkers, 1000);
 }
 
 function addDestinationMarkersToMap() {
     const destinations = <?= json_encode($destinations ?? []) ?>;
     
+    // Clear existing destination markers
+    destinationMarkers.forEach(marker => {
+        if (destinationsMap.hasLayer(marker)) {
+            destinationsMap.removeLayer(marker);
+        }
+    });
+    destinationMarkers = [];
+    
     destinations.forEach(function(destination) {
         if (destination.latitude && destination.longitude) {
+            
             const marker = L.marker([parseFloat(destination.latitude), parseFloat(destination.longitude)], {
                 icon: L.divIcon({
-                    className: 'destination-marker',
-                    html: '<i class="fas fa-map-marker-alt text-success"></i>',
-                    iconSize: [25, 25],
-                    iconAnchor: [12, 25]
+                    className: 'circular-marker destination-marker',
+                    html: '<i class="fas fa-map-marker-alt"></i>',
+                    iconSize: [40, 40],
+                    iconAnchor: [20, 20]
                 })
             })
-                .addTo(destinationsMap)
-                .bindPopup(`
-                    <div class="map-popup">
-                        <h6 class="mb-2">${destination.name}</h6>
-                        <p class="mb-1 text-muted">${destination.location}</p>
-                        ${destination.entry_fee > 0 ? `<p class="mb-2"><strong>Entry: UGX ${parseInt(destination.entry_fee).toLocaleString()}</strong></p>` : ''}
-                        <div class="d-flex gap-2">
-                            <a href="${BASE_URL}/destinations" class="btn btn-success btn-sm">
-                                View Details
-                            </a>
-                            <button class="btn btn-primary btn-sm" onclick="addToItinerary(${destination.id})">
-                                Add to Itinerary
-                            </button>
-                        </div>
+            .addTo(destinationsMap)
+            .bindTooltip(destination.name, {
+                permanent: false,
+                direction: 'top',
+                offset: [0, -10]
+            })
+            .bindPopup(`
+                <div class="map-popup">
+                    <h6>${destination.name}</h6>
+                    <div class="popup-meta">${destination.location}</div>
+                    ${destination.entry_fee > 0 ? `<div class="popup-price">Entry: UGX ${parseInt(destination.entry_fee).toLocaleString()}</div>` : ''}
+                    <div class="popup-actions">
+                        <a href="${BASE_URL}/destinations" class="btn btn-success btn-sm text-white">
+                            <i class="fas fa-eye me-1"></i>View Details
+                        </a>
+                        <a href="https://www.google.com/maps/dir/?api=1&destination=${destination.latitude},${destination.longitude}" 
+                           target="_blank" class="btn btn-primary btn-sm text-white">
+                            <i class="fas fa-directions me-1"></i>Get Directions
+                        </a>
+                        <button class="btn btn-info btn-sm text-white" onclick="addToItinerary(${destination.id})">
+                            <i class="fas fa-plus me-1"></i>Add to Itinerary
+                        </button>
                     </div>
-                `);
+                </div>
+            `);
             
+            // Store destination data in marker
+            marker.destinationData = destination;
             destinationMarkers.push(marker);
         }
     });
@@ -468,53 +580,86 @@ function addDestinationMarkersToMap() {
 function addNearbyHotelsToMap() {
     const hotels = <?= json_encode($hotels ?? []) ?>;
     
+    // Clear existing hotel markers
+    hotelMarkers.forEach(marker => {
+        if (destinationsMap.hasLayer(marker)) {
+            destinationsMap.removeLayer(marker);
+        }
+    });
+    hotelMarkers = [];
+    
     hotels.forEach(function(hotel) {
         if (hotel.latitude && hotel.longitude) {
+            
             const marker = L.marker([parseFloat(hotel.latitude), parseFloat(hotel.longitude)], {
                 icon: L.divIcon({
-                    className: 'hotel-marker',
-                    html: '<i class="fas fa-hotel text-primary"></i>',
-                    iconSize: [20, 20],
-                    iconAnchor: [10, 20]
+                    className: 'circular-marker hotel-marker',
+                    html: '<i class="fas fa-hotel"></i>',
+                    iconSize: [40, 40],
+                    iconAnchor: [20, 20]
                 })
             })
-                .addTo(destinationsMap)
-                .bindPopup(`
-                    <div class="map-popup">
-                        <h6 class="mb-2">${hotel.name}</h6>
-                        <p class="mb-1 text-muted">${hotel.location}</p>
-                        <p class="mb-2"><strong>UGX ${parseInt(hotel.price_per_night).toLocaleString()}/night</strong></p>
-                        <a href="${BASE_URL}/hotel-details?id=${hotel.id}" class="btn btn-primary btn-sm">
-                            View Hotel
+            .addTo(destinationsMap)
+            .bindTooltip(hotel.name, {
+                permanent: false,
+                direction: 'top',
+                offset: [0, -10]
+            })
+            .bindPopup(`
+                <div class="map-popup">
+                    <h6>${hotel.name}</h6>
+                    <div class="popup-meta">${hotel.location}</div>
+                    <div class="popup-price">UGX ${parseInt(hotel.price_per_night).toLocaleString()}/night</div>
+                    <div class="popup-actions">
+                        <a href="${BASE_URL}/hotel-details?id=${hotel.id}" class="btn btn-primary btn-sm text-white">
+                            <i class="fas fa-eye me-1"></i>View Hotel
+                        </a>
+                        <a href="https://www.google.com/maps/dir/?api=1&destination=${hotel.latitude},${hotel.longitude}" 
+                           target="_blank" class="btn btn-success btn-sm text-white">
+                            <i class="fas fa-directions me-1"></i>Get Directions
                         </a>
                     </div>
-                `);
+                </div>
+            `);
             
-            destinationMarkers.push(marker);
+            // Store hotel data in marker
+            marker.hotelData = hotel;
+            hotelMarkers.push(marker);
         }
     });
 }
 
 function getCurrentLocationForDestinations() {
     if (navigator.geolocation) {
+        // Show loading state
+        showDestinationsMapLoading('Getting your location...');
+        
         navigator.geolocation.getCurrentPosition(function(position) {
             const lat = position.coords.latitude;
             const lng = position.coords.longitude;
+            
+            // Remove existing user location marker
+            if (userLocationMarker) {
+                destinationsMap.removeLayer(userLocationMarker);
+            }
             
             // Update map center
             destinationsMap.setView([lat, lng], 10);
             
             // Add user location marker
-            L.marker([lat, lng], {
+            userLocationMarker = L.marker([lat, lng], {
                 icon: L.divIcon({
-                    className: 'user-location-marker',
-                    html: '<i class="fas fa-user text-primary"></i>',
-                    iconSize: [20, 20],
-                    iconAnchor: [10, 20]
+                    className: 'circular-marker user-location-marker',
+                    html: '<i class="fas fa-user"></i>',
+                    iconSize: [40, 40],
+                    iconAnchor: [20, 20]
                 })
             }).addTo(destinationsMap).bindPopup('Your Location');
             
+            hideDestinationsMapLoading();
+            
         }, function(error) {
+            hideDestinationsMapLoading();
             alert('Unable to get your location. Please search manually.');
         });
     } else {
@@ -524,12 +669,136 @@ function getCurrentLocationForDestinations() {
 
 function toggleDestinationsMapView() {
     const mapContainer = document.getElementById('destinationsMap');
-    if (mapContainer.style.height === '400px') {
-        mapContainer.style.height = '600px';
+    if (mapContainer.style.height === '500px') {
+        mapContainer.style.height = '700px';
         destinationsMap.invalidateSize();
     } else {
-        mapContainer.style.height = '400px';
+        mapContainer.style.height = '500px';
         destinationsMap.invalidateSize();
+    }
+}
+
+function toggleDestinationsFilterPanel() {
+    const panel = document.getElementById('destinationsFilterPanel');
+    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+}
+
+function toggleNearbyHotels() {
+    const checkbox = document.getElementById('showNearbyHotels');
+    showHotels = checkbox.checked;
+    
+    if (showHotels) {
+        addNearbyHotelsToMap();
+    } else {
+        // Remove hotel markers
+        hotelMarkers.forEach(marker => destinationsMap.removeLayer(marker));
+    }
+}
+
+function updateDestinationsFilters() {
+    const radius = document.getElementById('destinationsRadius').value;
+    currentFilters.radius = parseInt(radius);
+    
+    applyDestinationsFilters();
+}
+
+function applyDestinationsFilters() {
+    const minEntryFee = document.getElementById('minEntryFee').value;
+    const maxEntryFee = document.getElementById('maxEntryFee').value;
+    
+    currentFilters.minEntryFee = minEntryFee ? parseFloat(minEntryFee) : null;
+    currentFilters.maxEntryFee = maxEntryFee ? parseFloat(maxEntryFee) : null;
+    
+    // Filter destination markers
+    destinationMarkers.forEach(marker => {
+        const destination = marker.destinationData;
+        let showMarker = true;
+        
+        // Entry fee filter
+        if (currentFilters.minEntryFee && destination.entry_fee < currentFilters.minEntryFee) {
+            showMarker = false;
+        }
+        if (currentFilters.maxEntryFee && destination.entry_fee > currentFilters.maxEntryFee) {
+            showMarker = false;
+        }
+        
+        // Show/hide marker
+        if (showMarker) {
+            if (!destinationsMap.hasLayer(marker)) {
+                destinationsMap.addLayer(marker);
+            }
+        } else {
+            if (destinationsMap.hasLayer(marker)) {
+                destinationsMap.removeLayer(marker);
+            }
+        }
+    });
+    
+    // Update results count
+    updateDestinationsResultsCount();
+}
+
+function clearDestinationsFilters() {
+    // Reset filter inputs
+    document.getElementById('minEntryFee').value = '';
+    document.getElementById('maxEntryFee').value = '';
+    document.getElementById('destinationsRadius').value = '50';
+    document.getElementById('showNearbyHotels').checked = false;
+    
+    // Reset filter state
+    currentFilters = {
+        minEntryFee: null,
+        maxEntryFee: null,
+        radius: 50
+    };
+    showHotels = false;
+    
+    // Show all destination markers
+    destinationMarkers.forEach(marker => {
+        if (!destinationsMap.hasLayer(marker)) {
+            destinationsMap.addLayer(marker);
+        }
+    });
+    
+    // Remove hotel markers
+    hotelMarkers.forEach(marker => destinationsMap.removeLayer(marker));
+    
+    // Reset map view
+    fitDestinationsMapToMarkers();
+    updateDestinationsResultsCount();
+}
+
+function updateDestinationsResultsCount() {
+    const visibleMarkers = destinationMarkers.filter(marker => destinationsMap.hasLayer(marker));
+    const countElement = document.querySelector('.destinations-results-count');
+    if (countElement) {
+        countElement.textContent = `${visibleMarkers.length} destinations found`;
+    }
+}
+
+function showDestinationsMapLoading(message) {
+    const mapContainer = document.getElementById('destinationsMap');
+    let loadingDiv = mapContainer.querySelector('.map-loading');
+    
+    if (!loadingDiv) {
+        loadingDiv = document.createElement('div');
+        loadingDiv.className = 'map-loading';
+        mapContainer.appendChild(loadingDiv);
+    }
+    
+    loadingDiv.innerHTML = `
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <div class="mt-2">${message}</div>
+    `;
+}
+
+function hideDestinationsMapLoading() {
+    const mapContainer = document.getElementById('destinationsMap');
+    const loadingDiv = mapContainer.querySelector('.map-loading');
+    if (loadingDiv) {
+        loadingDiv.remove();
     }
 }
 
@@ -604,12 +873,10 @@ function showError(message) {
 
 // Fit map to show all markers
 function fitDestinationsMapToMarkers() {
-    if (destinationMarkers.length > 0) {
-        const group = new L.featureGroup(destinationMarkers);
+    const allMarkers = [...destinationMarkers, ...hotelMarkers];
+    if (allMarkers.length > 0) {
+        const group = new L.featureGroup(allMarkers);
         destinationsMap.fitBounds(group.getBounds().pad(0.1));
     }
 }
-
-// Call fitMapToMarkers after markers are added
-setTimeout(fitDestinationsMapToMarkers, 1000);
 </script>
