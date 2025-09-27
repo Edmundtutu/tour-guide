@@ -21,7 +21,7 @@
             </div>
             <div class="col-lg-6">
                 <div class="hero-image">
-                    <img src="https://images.unsplash.com/photo-1544551763-46a013bb70d5?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80" 
+                    <img src="https://cf.bstatic.com/xdata/images/hotel/max1024x768/658262197.jpg?k=37dffa3a649328df73b209c1f0bb8c3a1809aec50b905fdf1e4a9e05991d165f&o=&hp=1"
                          alt="Uganda Tourism" 
                          class="img-fluid rounded-lg shadow-lg">
                 </div>
