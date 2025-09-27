@@ -69,6 +69,30 @@
     </div>
 </section>
 
+<!-- Map Section -->
+<section class="py-4 bg-light">
+    <div class="container">
+        <div class="row">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3 class="mb-0">
+                        <i class="fas fa-map me-2 text-primary"></i>Interactive Map
+                    </h3>
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="toggleMapView()">
+                            <i class="fas fa-expand me-1"></i>Toggle View
+                        </button>
+                        <button type="button" class="btn btn-outline-success btn-sm" onclick="getCurrentLocation()">
+                            <i class="fas fa-map-marker-alt me-1"></i>My Location
+                        </button>
+                    </div>
+                </div>
+                <div id="hotelsMap" style="height: 400px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"></div>
+            </div>
+        </div>
+    </div>
+</section>
+
 <!-- Hotels Grid -->
 <section class="py-5">
     <div class="container">
@@ -252,6 +276,162 @@ $(document).ready(function() {
         }
     });
 });
+
+// Leaflet Map Integration
+let hotelsMap;
+let mapMarkers = [];
+
+// Initialize map when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    initializeHotelsMap();
+});
+
+function initializeHotelsMap() {
+    // Default center (Kampala, Uganda)
+    const defaultCenter = [0.3476, 32.5825];
+    
+    // Initialize map
+    hotelsMap = L.map('hotelsMap').setView(defaultCenter, 7);
+    
+    // Add OpenStreetMap tiles
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(hotelsMap);
+    
+    // Add hotels markers
+    addHotelMarkers();
+    
+    // Add destinations markers
+    addDestinationMarkers();
+}
+
+function addHotelMarkers() {
+    const hotels = <?= json_encode($hotels ?? []) ?>;
+    
+    hotels.forEach(function(hotel) {
+        if (hotel.latitude && hotel.longitude) {
+            const marker = L.marker([parseFloat(hotel.latitude), parseFloat(hotel.longitude)])
+                .addTo(hotelsMap)
+                .bindPopup(`
+                    <div class="map-popup">
+                        <h6 class="mb-2">${hotel.name}</h6>
+                        <p class="mb-1 text-muted">${hotel.location}</p>
+                        <p class="mb-2"><strong>UGX ${parseInt(hotel.price_per_night).toLocaleString()}/night</strong></p>
+                        <a href="${BASE_URL}/hotel-details?id=${hotel.id}" class="btn btn-primary btn-sm">
+                            View Details
+                        </a>
+                    </div>
+                `);
+            
+            mapMarkers.push(marker);
+        }
+    });
+}
+
+function addDestinationMarkers() {
+    const destinations = <?= json_encode($destinations ?? []) ?>;
+    
+    destinations.forEach(function(destination) {
+        if (destination.latitude && destination.longitude) {
+            const marker = L.marker([parseFloat(destination.latitude), parseFloat(destination.longitude)], {
+                icon: L.divIcon({
+                    className: 'destination-marker',
+                    html: '<i class="fas fa-map-marker-alt text-success"></i>',
+                    iconSize: [20, 20],
+                    iconAnchor: [10, 20]
+                })
+            })
+                .addTo(hotelsMap)
+                .bindPopup(`
+                    <div class="map-popup">
+                        <h6 class="mb-2">${destination.name}</h6>
+                        <p class="mb-1 text-muted">${destination.location}</p>
+                        ${destination.entry_fee > 0 ? `<p class="mb-2"><strong>Entry: UGX ${parseInt(destination.entry_fee).toLocaleString()}</strong></p>` : ''}
+                        <a href="${BASE_URL}/destinations" class="btn btn-success btn-sm">
+                            View Details
+                        </a>
+                    </div>
+                `);
+            
+            mapMarkers.push(marker);
+        }
+    });
+}
+
+function getCurrentLocation() {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function(position) {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+            
+            // Update map center
+            hotelsMap.setView([lat, lng], 12);
+            
+            // Add user location marker
+            L.marker([lat, lng], {
+                icon: L.divIcon({
+                    className: 'user-location-marker',
+                    html: '<i class="fas fa-user text-primary"></i>',
+                    iconSize: [20, 20],
+                    iconAnchor: [10, 20]
+                })
+            }).addTo(hotelsMap).bindPopup('Your Location');
+            
+            // Update search form with coordinates
+            const form = document.querySelector('form');
+            const locationInput = document.getElementById('location');
+            locationInput.value = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+            
+            // Add hidden inputs for coordinates
+            let latInput = form.querySelector('input[name="lat"]');
+            let lngInput = form.querySelector('input[name="lng"]');
+            
+            if (!latInput) {
+                latInput = document.createElement('input');
+                latInput.type = 'hidden';
+                latInput.name = 'lat';
+                form.appendChild(latInput);
+            }
+            
+            if (!lngInput) {
+                lngInput = document.createElement('input');
+                lngInput.type = 'hidden';
+                lngInput.name = 'lng';
+                form.appendChild(lngInput);
+            }
+            
+            latInput.value = lat;
+            lngInput.value = lng;
+            
+        }, function(error) {
+            alert('Unable to get your location. Please enter a location manually.');
+        });
+    } else {
+        alert('Geolocation is not supported by this browser.');
+    }
+}
+
+function toggleMapView() {
+    const mapContainer = document.getElementById('hotelsMap');
+    if (mapContainer.style.height === '400px') {
+        mapContainer.style.height = '600px';
+        hotelsMap.invalidateSize();
+    } else {
+        mapContainer.style.height = '400px';
+        hotelsMap.invalidateSize();
+    }
+}
+
+// Fit map to show all markers
+function fitMapToMarkers() {
+    if (mapMarkers.length > 0) {
+        const group = new L.featureGroup(mapMarkers);
+        hotelsMap.fitBounds(group.getBounds().pad(0.1));
+    }
+}
+
+// Call fitMapToMarkers after markers are added
+setTimeout(fitMapToMarkers, 1000);
 </script>
 
 <style>

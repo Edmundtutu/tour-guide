@@ -41,7 +41,7 @@ class Hotel extends BaseModel {
         return $this->update($hotelId, ['status' => $status]);
     }
     
-    public function searchHotels($location = null, $priceRange = null) {
+    public function searchHotels($location = null, $priceRange = null, $latitude = null, $longitude = null, $radius = 50) {
         $conditions = ['status' => 'approved'];
         
         if ($location) {
@@ -53,7 +53,49 @@ class Hotel extends BaseModel {
             return $stmt->fetchAll();
         }
         
+        // Search by coordinates (within radius)
+        if ($latitude && $longitude) {
+            $sql = "SELECT *, 
+                    (6371 * acos(cos(radians(:lat)) * cos(radians(latitude)) * 
+                    cos(radians(longitude) - radians(:lng)) + sin(radians(:lat)) * 
+                    sin(radians(latitude)))) AS distance 
+                    FROM hotels 
+                    WHERE status = 'approved' 
+                    AND latitude IS NOT NULL 
+                    AND longitude IS NOT NULL
+                    HAVING distance < :radius 
+                    ORDER BY distance";
+            
+            $stmt = $this->db->prepare($sql);
+            $stmt->bindValue(':lat', $latitude);
+            $stmt->bindValue(':lng', $longitude);
+            $stmt->bindValue(':radius', $radius);
+            $stmt->execute();
+            return $stmt->fetchAll();
+        }
+        
         return $this->findAll($conditions);
+    }
+    
+    public function getHotelsNearby($latitude, $longitude, $radius = 50) {
+        $sql = "SELECT *, 
+                (6371 * acos(cos(radians(:lat)) * cos(radians(latitude)) * 
+                cos(radians(longitude) - radians(:lng)) + sin(radians(:lat)) * 
+                sin(radians(latitude)))) AS distance 
+                FROM hotels 
+                WHERE status = 'approved' 
+                AND latitude IS NOT NULL 
+                AND longitude IS NOT NULL
+                HAVING distance < :radius 
+                ORDER BY distance 
+                LIMIT 20";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->bindValue(':lat', $latitude);
+        $stmt->bindValue(':lng', $longitude);
+        $stmt->bindValue(':radius', $radius);
+        $stmt->execute();
+        return $stmt->fetchAll();
     }
 }
 ?>

@@ -49,6 +49,30 @@
     </div>
 </section>
 
+<!-- Map Section -->
+<section class="py-4 bg-light">
+    <div class="container">
+        <div class="row">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3 class="mb-0">
+                        <i class="fas fa-map me-2 text-primary"></i>Uganda Destinations Map
+                    </h3>
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="toggleDestinationsMapView()">
+                            <i class="fas fa-expand me-1"></i>Toggle View
+                        </button>
+                        <button type="button" class="btn btn-outline-success btn-sm" onclick="getCurrentLocationForDestinations()">
+                            <i class="fas fa-map-marker-alt me-1"></i>My Location
+                        </button>
+                    </div>
+                </div>
+                <div id="destinationsMap" style="height: 400px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"></div>
+            </div>
+        </div>
+    </div>
+</section>
+
 <!-- Destinations Grid -->
 <section class="py-5">
     <div class="container">
@@ -376,3 +400,216 @@ function planVisit(destinationId) {
     }
 }
 </style>
+
+<script>
+// Destinations Map Integration
+let destinationsMap;
+let destinationMarkers = [];
+
+// Initialize destinations map when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    initializeDestinationsMap();
+});
+
+function initializeDestinationsMap() {
+    // Default center (Kampala, Uganda)
+    const defaultCenter = [0.3476, 32.5825];
+    
+    // Initialize map
+    destinationsMap = L.map('destinationsMap').setView(defaultCenter, 7);
+    
+    // Add OpenStreetMap tiles
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(destinationsMap);
+    
+    // Add destination markers
+    addDestinationMarkersToMap();
+    
+    // Add nearby hotels
+    addNearbyHotelsToMap();
+}
+
+function addDestinationMarkersToMap() {
+    const destinations = <?= json_encode($destinations ?? []) ?>;
+    
+    destinations.forEach(function(destination) {
+        if (destination.latitude && destination.longitude) {
+            const marker = L.marker([parseFloat(destination.latitude), parseFloat(destination.longitude)], {
+                icon: L.divIcon({
+                    className: 'destination-marker',
+                    html: '<i class="fas fa-map-marker-alt text-success"></i>',
+                    iconSize: [25, 25],
+                    iconAnchor: [12, 25]
+                })
+            })
+                .addTo(destinationsMap)
+                .bindPopup(`
+                    <div class="map-popup">
+                        <h6 class="mb-2">${destination.name}</h6>
+                        <p class="mb-1 text-muted">${destination.location}</p>
+                        ${destination.entry_fee > 0 ? `<p class="mb-2"><strong>Entry: UGX ${parseInt(destination.entry_fee).toLocaleString()}</strong></p>` : ''}
+                        <div class="d-flex gap-2">
+                            <a href="${BASE_URL}/destinations" class="btn btn-success btn-sm">
+                                View Details
+                            </a>
+                            <button class="btn btn-primary btn-sm" onclick="addToItinerary(${destination.id})">
+                                Add to Itinerary
+                            </button>
+                        </div>
+                    </div>
+                `);
+            
+            destinationMarkers.push(marker);
+        }
+    });
+}
+
+function addNearbyHotelsToMap() {
+    const hotels = <?= json_encode($hotels ?? []) ?>;
+    
+    hotels.forEach(function(hotel) {
+        if (hotel.latitude && hotel.longitude) {
+            const marker = L.marker([parseFloat(hotel.latitude), parseFloat(hotel.longitude)], {
+                icon: L.divIcon({
+                    className: 'hotel-marker',
+                    html: '<i class="fas fa-hotel text-primary"></i>',
+                    iconSize: [20, 20],
+                    iconAnchor: [10, 20]
+                })
+            })
+                .addTo(destinationsMap)
+                .bindPopup(`
+                    <div class="map-popup">
+                        <h6 class="mb-2">${hotel.name}</h6>
+                        <p class="mb-1 text-muted">${hotel.location}</p>
+                        <p class="mb-2"><strong>UGX ${parseInt(hotel.price_per_night).toLocaleString()}/night</strong></p>
+                        <a href="${BASE_URL}/hotel-details?id=${hotel.id}" class="btn btn-primary btn-sm">
+                            View Hotel
+                        </a>
+                    </div>
+                `);
+            
+            destinationMarkers.push(marker);
+        }
+    });
+}
+
+function getCurrentLocationForDestinations() {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function(position) {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+            
+            // Update map center
+            destinationsMap.setView([lat, lng], 10);
+            
+            // Add user location marker
+            L.marker([lat, lng], {
+                icon: L.divIcon({
+                    className: 'user-location-marker',
+                    html: '<i class="fas fa-user text-primary"></i>',
+                    iconSize: [20, 20],
+                    iconAnchor: [10, 20]
+                })
+            }).addTo(destinationsMap).bindPopup('Your Location');
+            
+        }, function(error) {
+            alert('Unable to get your location. Please search manually.');
+        });
+    } else {
+        alert('Geolocation is not supported by this browser.');
+    }
+}
+
+function toggleDestinationsMapView() {
+    const mapContainer = document.getElementById('destinationsMap');
+    if (mapContainer.style.height === '400px') {
+        mapContainer.style.height = '600px';
+        destinationsMap.invalidateSize();
+    } else {
+        mapContainer.style.height = '400px';
+        destinationsMap.invalidateSize();
+    }
+}
+
+function addToItinerary(destinationId) {
+    if (!confirm('Add this destination to your itinerary?')) {
+        return;
+    }
+    
+    // Create form data
+    const formData = new FormData();
+    formData.append('destination_id', destinationId);
+    formData.append('csrf_token', '<?= View::csrfToken() ?>');
+    formData.append('ajax', '1');
+    
+    // Make AJAX request
+    fetch('<?= View::url('/itinerary/add-destination') ?>', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showSuccess(data.message);
+        } else {
+            showError(data.message);
+        }
+    })
+    .catch(error => {
+        showError('An error occurred while adding to itinerary.');
+    });
+}
+
+function showSuccess(message) {
+    // Create success alert
+    const alert = document.createElement('div');
+    alert.className = 'alert alert-success alert-dismissible fade show position-fixed';
+    alert.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    alert.innerHTML = `
+        <i class="fas fa-check-circle me-2"></i>${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(alert);
+    
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+        if (alert.parentNode) {
+            alert.remove();
+        }
+    }, 5000);
+}
+
+function showError(message) {
+    // Create error alert
+    const alert = document.createElement('div');
+    alert.className = 'alert alert-danger alert-dismissible fade show position-fixed';
+    alert.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    alert.innerHTML = `
+        <i class="fas fa-exclamation-circle me-2"></i>${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(alert);
+    
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+        if (alert.parentNode) {
+            alert.remove();
+        }
+    }, 5000);
+}
+
+// Fit map to show all markers
+function fitDestinationsMapToMarkers() {
+    if (destinationMarkers.length > 0) {
+        const group = new L.featureGroup(destinationMarkers);
+        destinationsMap.fitBounds(group.getBounds().pad(0.1));
+    }
+}
+
+// Call fitMapToMarkers after markers are added
+setTimeout(fitDestinationsMapToMarkers, 1000);
+</script>

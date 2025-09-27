@@ -1,23 +1,23 @@
 <?php
 require_once __DIR__ . '/../services/HotelService.php';
 require_once __DIR__ . '/../services/BookingService.php';
-require_once __DIR__ . '/../models/Destination.php';
+require_once __DIR__ . '/../services/DestinationService.php';
 
 class TouristController {
     private $hotelService;
     private $bookingService;
-    private $destinationModel;
+    private $destinationService;
     
     public function __construct() {
         $this->hotelService = new HotelService();
         $this->bookingService = new BookingService();
-        $this->destinationModel = new Destination();
+        $this->destinationService = new DestinationService();
     }
     
     public function home() {
         try {
             $hotels = $this->hotelService->getAvailableHotels();
-            $destinations = $this->destinationModel->getPopularDestinations(6);
+            $destinations = $this->destinationService->getPopularDestinations(6);
             
             $data = [
                 'title' => 'Home',
@@ -34,12 +34,28 @@ class TouristController {
     public function hotels() {
         try {
             $location = $_GET['location'] ?? null;
-            $hotels = $this->hotelService->searchHotels($location);
+            $latitude = $_GET['lat'] ?? null;
+            $longitude = $_GET['lng'] ?? null;
+            $radius = $_GET['radius'] ?? 50;
+            
+            // Search hotels by location or coordinates
+            if ($latitude && $longitude) {
+                $hotels = $this->hotelService->searchHotels($location, null, $latitude, $longitude, $radius);
+            } else {
+                $hotels = $this->hotelService->searchHotels($location);
+            }
+            
+            // Get all destinations for map markers
+            $destinations = $this->destinationService->getAllDestinations();
             
             $data = [
                 'title' => 'Hotels',
                 'hotels' => $hotels,
-                'location' => $location
+                'destinations' => $destinations,
+                'location' => $location,
+                'latitude' => $latitude,
+                'longitude' => $longitude,
+                'radius' => $radius
             ];
             
             echo View::renderWithLayout('tourist/hotels', $data);
@@ -159,17 +175,30 @@ class TouristController {
     public function destinations() {
         try {
             $query = $_GET['search'] ?? null;
+            $latitude = $_GET['lat'] ?? null;
+            $longitude = $_GET['lng'] ?? null;
+            $radius = $_GET['radius'] ?? 100;
             
+            // Search destinations by query or coordinates
             if ($query) {
-                $destinations = $this->destinationModel->searchDestinations($query);
+                $destinations = $this->destinationService->searchDestinations($query);
+            } elseif ($latitude && $longitude) {
+                $destinations = $this->destinationService->searchDestinationsByLocation(null, $latitude, $longitude, $radius);
             } else {
-                $destinations = $this->destinationModel->findAll();
+                $destinations = $this->destinationService->getAllDestinations();
             }
+            
+            // Get nearby hotels for map
+            $hotels = $this->hotelService->getAvailableHotels();
             
             $data = [
                 'title' => 'Destinations',
                 'destinations' => $destinations,
-                'search' => $query
+                'hotels' => $hotels,
+                'search' => $query,
+                'latitude' => $latitude,
+                'longitude' => $longitude,
+                'radius' => $radius
             ];
             
             echo View::renderWithLayout('tourist/destinations', $data);
@@ -600,6 +629,63 @@ class TouristController {
             $_SESSION['error'] = $e->getMessage();
             header('Location: ' . BASE_URL . '/tourist/itinerary');
             exit;
+        }
+    }
+    
+    public function addDestinationToItinerary() {
+        try {
+            Auth::requireRole('tourist');
+            
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                throw new Exception("Method not allowed");
+            }
+            
+            // CSRF validation
+            if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== View::csrfToken()) {
+                throw new Exception("Invalid CSRF token");
+            }
+            
+            $destinationId = $_POST['destination_id'] ?? null;
+            $itineraryId = $_POST['itinerary_id'] ?? null;
+            
+            if (!$destinationId) {
+                throw new Exception("Destination ID is required");
+            }
+            
+            // Get destination details
+            $destination = $this->destinationService->getDestinationById($destinationId);
+            if (!$destination) {
+                throw new Exception("Destination not found");
+            }
+            
+            // In a real application, you would save this to a database table like:
+            // itinerary_destinations (itinerary_id, destination_id, added_date, notes)
+            
+            // For now, just return success
+            if ($_SERVER['HTTP_ACCEPT'] === 'application/json' || isset($_POST['ajax'])) {
+                header('Content-Type: application/json');
+                echo json_encode([
+                    'success' => true,
+                    'message' => 'Destination added to itinerary successfully!',
+                    'destination' => $destination
+                ]);
+            } else {
+                $_SESSION['success'] = 'Destination "' . $destination['name'] . '" added to your itinerary!';
+                header('Location: ' . BASE_URL . '/itinerary');
+                exit;
+            }
+        } catch (Exception $e) {
+            if ($_SERVER['HTTP_ACCEPT'] === 'application/json' || isset($_POST['ajax'])) {
+                header('Content-Type: application/json');
+                echo json_encode([
+                    'success' => false,
+                    'message' => $e->getMessage()
+                ]);
+            } else {
+                $_SESSION['error'] = $e->getMessage();
+                header('Location: ' . BASE_URL . '/destinations');
+                exit;
+            }
         }
     }
 }

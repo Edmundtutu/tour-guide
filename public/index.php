@@ -41,6 +41,7 @@ try {
     $router->addRoute('GET', '/destinations', 'TouristController', 'destinations');
     $router->addRoute('GET', '/itinerary', 'TouristController', 'itinerary');
     $router->addRoute('POST', '/itinerary/create', 'TouristController', 'createItinerary');
+    $router->addRoute('POST', '/itinerary/add-destination', 'TouristController', 'addDestinationToItinerary');
     
     // API routes for AJAX
     $router->addRoute('POST', '/api/search', 'TouristController', 'apiSearch');

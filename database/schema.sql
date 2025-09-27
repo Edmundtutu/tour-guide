@@ -26,6 +26,8 @@ CREATE TABLE destinations (
     name VARCHAR(150) NOT NULL,
     description TEXT,
     location VARCHAR(200),
+    latitude DECIMAL(10, 8) NULL,
+    longitude DECIMAL(11, 8) NULL,
     image_url VARCHAR(255),
     entry_fee DECIMAL(10,2) DEFAULT 0.00,
     map_link VARCHAR(255),
@@ -42,6 +44,8 @@ CREATE TABLE hotels (
     name VARCHAR(150) NOT NULL,
     description TEXT,
     location VARCHAR(200),
+    latitude DECIMAL(10, 8) NULL,
+    longitude DECIMAL(11, 8) NULL,
     price_per_night DECIMAL(10,2),
     image_url VARCHAR(255),
     status ENUM('pending','approved','blocked') DEFAULT 'pending',
@@ -131,3 +135,14 @@ CREATE TABLE events (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (hotel_id) REFERENCES hotels(id) ON DELETE CASCADE
 );
+
+-- ======================
+-- INDEXES FOR PERFORMANCE
+-- ======================
+CREATE INDEX idx_destinations_coords ON destinations(latitude, longitude);
+CREATE INDEX idx_hotels_coords ON hotels(latitude, longitude);
+CREATE INDEX idx_hotels_status ON hotels(status);
+CREATE INDEX idx_bookings_dates ON bookings(check_in, check_out);
+CREATE INDEX idx_bookings_status ON bookings(status);
+CREATE INDEX idx_users_role ON users(role);
+CREATE INDEX idx_users_status ON users(status);
