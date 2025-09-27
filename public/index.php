@@ -2,11 +2,17 @@
 // Load configuration
 require_once __DIR__ . '/../config/config.php';
 
+// Start session early
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 // Load core classes
 require_once __DIR__ . '/../app/core/Database.php';
 require_once __DIR__ . '/../app/core/BaseModel.php';
 require_once __DIR__ . '/../app/core/Auth.php';
 require_once __DIR__ . '/../app/core/Router.php';
+require_once __DIR__ . '/../app/core/View.php';
     
 // Load controllers
 require_once __DIR__ . '/../app/controllers/AuthController.php';
@@ -26,12 +32,21 @@ try {
     
     // Tourist routes
     $router->addRoute('GET', '/', 'TouristController', 'home');
+    $router->addRoute('GET', '/home', 'TouristController', 'home');
     $router->addRoute('GET', '/hotels', 'TouristController', 'hotels');
     $router->addRoute('GET', '/hotel-details', 'TouristController', 'hotelDetails');
     $router->addRoute('GET', '/book', 'TouristController', 'book');
     $router->addRoute('POST', '/book', 'TouristController', 'book');
     $router->addRoute('GET', '/my-bookings', 'TouristController', 'myBookings');
     $router->addRoute('GET', '/destinations', 'TouristController', 'destinations');
+    $router->addRoute('GET', '/itinerary', 'TouristController', 'itinerary');
+    $router->addRoute('POST', '/itinerary/create', 'TouristController', 'createItinerary');
+    
+    // API routes for AJAX
+    $router->addRoute('POST', '/api/search', 'TouristController', 'apiSearch');
+    $router->addRoute('POST', '/api/calculate-price', 'TouristController', 'apiCalculatePrice');
+    $router->addRoute('POST', '/api/cancel-booking', 'TouristController', 'apiCancelBooking');
+    $router->addRoute('GET', '/api/download-receipt', 'TouristController', 'apiDownloadReceipt');
     
     // Host routes
     $router->addRoute('GET', '/host/dashboard', 'HostController', 'dashboard');
@@ -49,6 +64,10 @@ try {
     $router->addRoute('GET', '/host/subscription', 'HostController', 'subscription');
     $router->addRoute('GET', '/host/subscribe', 'HostController', 'subscribe');
     $router->addRoute('POST', '/host/subscribe', 'HostController', 'subscribe');
+    $router->addRoute('GET', '/host/profile', 'HostController', 'profile');
+    $router->addRoute('POST', '/host/profile/update', 'HostController', 'updateProfile');
+    $router->addRoute('POST', '/host/profile/change-password', 'HostController', 'changePassword');
+    $router->addRoute('GET', '/host/calendar', 'HostController', 'calendar');
     
     // Admin routes
     $router->addRoute('GET', '/admin/dashboard', 'AdminController', 'dashboard');
@@ -58,15 +77,63 @@ try {
     $router->addRoute('POST', '/admin/block-hotel', 'AdminController', 'blockHotel');
     $router->addRoute('GET', '/admin/subscriptions', 'AdminController', 'subscriptions');
     $router->addRoute('GET', '/admin/bookings', 'AdminController', 'bookings');
+    $router->addRoute('GET', '/admin/reports', 'AdminController', 'reports');
+    $router->addRoute('GET', '/admin/hosts', 'AdminController', 'hosts');
     
     // Dispatch the request
     $router->dispatch();
     
 } catch (Exception $e) {
-    // Simple error handling - in production, log errors and show user-friendly message
-    echo "<h1>Application Error</h1>";
-    echo "<p>" . htmlspecialchars($e->getMessage()) . "</p>";
+    // Log the error (in production, use proper logging)
+    error_log("Tour Guide Error: " . $e->getMessage() . " in " . $e->getFile() . " on line " . $e->getLine());
     
-    // For development only - remove in production
-    echo "<pre>" . htmlspecialchars($e->getTraceAsString()) . "</pre>";
+    // Check if this is an AJAX request
+    if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
+        header('Content-Type: application/json');
+        echo json_encode([
+            'success' => false,
+            'message' => 'An error occurred. Please try again.',
+            'error' => $e->getMessage()
+        ]);
+        exit;
+    }
+    
+    // Show user-friendly error page
+    $data = [
+        'title' => 'Application Error',
+        'error_message' => $e->getMessage(),
+        'show_details' => isset($_GET['debug']) && $_GET['debug'] === 'true'
+    ];
+    
+    // Try to render error page, fallback to simple HTML if View class fails
+    try {
+        echo View::renderWithLayout('error', $data);
+    } catch (Exception $viewError) {
+        echo "<!DOCTYPE html>
+        <html>
+        <head>
+            <title>Application Error</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 40px; }
+                .error { background: #f8d7da; color: #721c24; padding: 20px; border-radius: 5px; }
+                .details { background: #f8f9fa; padding: 15px; margin-top: 20px; border-radius: 5px; }
+            </style>
+        </head>
+        <body>
+            <h1>Application Error</h1>
+            <div class='error'>
+                <p><strong>Error:</strong> " . htmlspecialchars($e->getMessage()) . "</p>
+            </div>";
+        
+        if (isset($_GET['debug']) && $_GET['debug'] === 'true') {
+            echo "<div class='details'>
+                <h3>Debug Information:</h3>
+                <pre>" . htmlspecialchars($e->getTraceAsString()) . "</pre>
+            </div>";
+        }
+        
+        echo "<p><a href='" . BASE_URL . "'>Go Home</a></p>
+        </body>
+        </html>";
+    }
 }

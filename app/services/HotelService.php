@@ -86,9 +86,23 @@ class HotelService {
         return $this->hotelModel->findAvailableHotels();
     }
     
+    public function getAllHotels() {
+        Auth::requireRole('admin');
+        return $this->hotelModel->findAll();
+    }
+    
+    public function getHotelsByStatus($status) {
+        Auth::requireRole('admin');
+        return $this->hotelModel->findByStatus($status);
+    }
+    
     public function getPendingHotels() {
         Auth::requireRole('admin');
         return $this->hotelModel->findByStatus('pending');
+    }
+    
+    public function getRoomById($roomId) {
+        return $this->roomModel->findById($roomId);
     }
     
     // Room management

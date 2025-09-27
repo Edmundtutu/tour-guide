@@ -202,6 +202,11 @@ class BookingService {
         return $this->bookingModel->updatePaymentStatus($bookingId, 'paid');
     }
     
+    public function getAllBookings() {
+        Auth::requireRole('admin');
+        return $this->bookingModel->findAll();
+    }
+    
     public function getPendingBookings() {
         Auth::requireLogin();
         

@@ -1,6 +1,6 @@
--- Database: uganda_tour_guide
-CREATE DATABASE IF NOT EXISTS uganda_tour_guide;
-USE uganda_tour_guide;
+-- Database: tour_guide
+CREATE DATABASE IF NOT EXISTS tour_guide;
+USE tour_guide;
 
 -- ======================
 -- USERS (Tourists, Hosts, Admins)
@@ -11,7 +11,9 @@ CREATE TABLE users (
     email VARCHAR(150) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL, -- hashed password
     role ENUM('tourist','host','admin') DEFAULT 'tourist',
+    status ENUM('active','inactive','blocked') DEFAULT 'active',
     phone VARCHAR(20),
+    last_login TIMESTAMP NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );

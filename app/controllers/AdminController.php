@@ -21,17 +21,31 @@ class AdminController {
         try {
             Auth::requireRole('admin');
             
-            $totalUsers = count($this->userService->getAllUsers());
-            $totalHotels = count($this->hotelService->getAvailableHotels());
-            $pendingHotels = count($this->hotelService->getPendingHotels());
-            $subscriptionSummary = $this->subscriptionService->getSubscriptionSummary();
+            $users = $this->userService->getAllUsers();
+            $hotels = $this->hotelService->getAllHotels();
+            $bookings = $this->bookingService->getAllBookings();
+            $subscriptions = $this->subscriptionService->getAllSubscriptions();
             
-            $this->renderDashboard([
-                'totalUsers' => $totalUsers,
-                'totalHotels' => $totalHotels,
-                'pendingHotels' => $pendingHotels,
-                'subscriptions' => $subscriptionSummary
-            ]);
+            // Calculate statistics
+            $stats = [
+                'total_users' => count($users),
+                'total_hotels' => count($hotels),
+                'total_bookings' => count($bookings),
+                'total_revenue' => array_sum(array_column($bookings, 'total_price')),
+                'pending_hotels' => count(array_filter($hotels, function($h) { return $h['status'] === 'pending'; })),
+                'active_subscriptions' => count(array_filter($subscriptions, function($s) { return $s['status'] === 'active'; })),
+                'new_users_today' => count(array_filter($users, function($u) { return date('Y-m-d', strtotime($u['created_at'])) === date('Y-m-d'); })),
+                'active_users' => count(array_filter($users, function($u) { return ($u['status'] ?? 'active') === 'active'; })),
+                'blocked_users' => count(array_filter($users, function($u) { return ($u['status'] ?? 'active') === 'blocked'; })),
+                'system_health' => 'Good'
+            ];
+            
+            $data = [
+                'title' => 'Admin Dashboard',
+                'stats' => $stats
+            ];
+            
+            echo View::renderWithLayout('admin/dashboard', $data);
         } catch (Exception $e) {
             $this->renderError($e->getMessage());
         }
@@ -42,7 +56,23 @@ class AdminController {
             Auth::requireRole('admin');
             $users = $this->userService->getAllUsers();
             
-            $this->renderUsers(['users' => $users]);
+            // Calculate user statistics
+            $stats = [
+                'active' => count(array_filter($users, function($u) { return ($u['status'] ?? 'active') === 'active'; })),
+                'blocked' => count(array_filter($users, function($u) { return ($u['status'] ?? 'active') === 'blocked'; })),
+                'inactive' => count(array_filter($users, function($u) { return ($u['status'] ?? 'active') === 'inactive'; })),
+                'tourists' => count(array_filter($users, function($u) { return $u['role'] === 'tourist'; })),
+                'hosts' => count(array_filter($users, function($u) { return $u['role'] === 'host'; })),
+                'admins' => count(array_filter($users, function($u) { return $u['role'] === 'admin'; }))
+            ];
+            
+            $data = [
+                'title' => 'User Management',
+                'users' => $users,
+                'stats' => $stats
+            ];
+            
+            echo View::renderWithLayout('admin/users', $data);
         } catch (Exception $e) {
             $this->renderError($e->getMessage());
         }
@@ -97,20 +127,6 @@ class AdminController {
         }
     }
     
-    public function subscriptions() {
-        try {
-            Auth::requireRole('admin');
-            $subscriptions = $this->subscriptionService->getAllSubscriptions();
-            $expiringSubscriptions = $this->subscriptionService->getExpiringSubscriptions();
-            
-            $this->renderSubscriptions([
-                'subscriptions' => $subscriptions,
-                'expiring' => $expiringSubscriptions
-            ]);
-        } catch (Exception $e) {
-            $this->renderError($e->getMessage());
-        }
-    }
     
     public function bookings() {
         try {
@@ -261,6 +277,218 @@ class AdminController {
         }
     }
     
+    public function subscriptions() {
+        try {
+            Auth::requireRole('admin');
+            
+            $subscriptions = $this->subscriptionService->getAllSubscriptions();
+            $hosts = $this->userService->getUsersByRole('host');
+            
+            // Calculate statistics
+            $stats = [
+                'total_subscriptions' => count($subscriptions),
+                'active_subscriptions' => count(array_filter($subscriptions, function($s) { return $s['status'] === 'active'; })),
+                'expiring_soon' => count(array_filter($subscriptions, function($s) {
+                    $endDate = new DateTime($s['end_date']);
+                    $today = new DateTime();
+                    $daysLeft = $today->diff($endDate)->days;
+                    return $s['status'] === 'active' && $daysLeft <= 7;
+                })),
+                'monthly_revenue' => array_sum(array_filter(array_column($subscriptions, 'amount'), function($amount, $key) use ($subscriptions) {
+                    return $subscriptions[$key]['status'] === 'active' && $subscriptions[$key]['plan'] === 'monthly';
+                }, ARRAY_FILTER_USE_BOTH))
+            ];
+            
+            // Add host information to subscriptions
+            foreach ($subscriptions as &$subscription) {
+                $host = array_filter($hosts, function($h) use ($subscription) {
+                    return $h['id'] == $subscription['host_id'];
+                });
+                $host = reset($host);
+                $subscription['host_name'] = $host['name'] ?? 'Unknown';
+                $subscription['host_email'] = $host['email'] ?? 'Unknown';
+            }
+            
+            $data = [
+                'title' => 'Subscription Management',
+                'subscriptions' => $subscriptions,
+                'hosts' => $hosts,
+                'stats' => $stats
+            ];
+            
+            echo View::renderWithLayout('admin/subscriptions', $data);
+        } catch (Exception $e) {
+            $this->renderError($e->getMessage());
+        }
+    }
+    
+    public function reports() {
+        try {
+            Auth::requireRole('admin');
+            
+            $users = $this->userService->getAllUsers();
+            $hotels = $this->hotelService->getAllHotels();
+            $bookings = $this->bookingService->getAllBookings();
+            $subscriptions = $this->subscriptionService->getAllSubscriptions();
+            
+            // Calculate key metrics
+            $metrics = [
+                'total_revenue' => array_sum(array_column($bookings, 'total_price')),
+                'total_bookings' => count($bookings),
+                'total_users' => count($users),
+                'total_hotels' => count($hotels),
+                'revenue_change' => 15.5, // Mock data
+                'bookings_change' => 8.2, // Mock data
+                'users_change' => 12.1, // Mock data
+                'hotels_change' => 5.7 // Mock data
+            ];
+            
+            // Mock chart data
+            $chart_data = [
+                'revenue' => [
+                    'labels' => ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                    'data' => [1500000, 1800000, 2200000, 1900000, 2500000, 2800000]
+                ],
+                'booking_status' => [
+                    'labels' => ['Approved', 'Pending', 'Cancelled', 'Rejected'],
+                    'data' => [45, 15, 8, 2]
+                ],
+                'user_growth' => [
+                    'labels' => ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                    'data' => [12, 19, 15, 25, 22, 30]
+                ]
+            ];
+            
+            // Mock top hotels data
+            $top_hotels = [
+                [
+                    'name' => 'Kampala Hotel',
+                    'location' => 'Kampala, Uganda',
+                    'image_url' => 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=100&h=100&fit=crop',
+                    'bookings' => 45,
+                    'revenue' => 2500000,
+                    'rating' => 4.5
+                ],
+                [
+                    'name' => 'Entebbe Resort',
+                    'location' => 'Entebbe, Uganda',
+                    'image_url' => 'https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=100&h=100&fit=crop',
+                    'bookings' => 38,
+                    'revenue' => 2200000,
+                    'rating' => 4.3
+                ],
+                [
+                    'name' => 'Jinja Lodge',
+                    'location' => 'Jinja, Uganda',
+                    'image_url' => 'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=100&h=100&fit=crop',
+                    'bookings' => 32,
+                    'revenue' => 1800000,
+                    'rating' => 4.1
+                ]
+            ];
+            
+            // Mock monthly data
+            $monthly_data = [
+                [
+                    'month' => 'January 2024',
+                    'revenue' => 1500000,
+                    'bookings' => 25,
+                    'new_users' => 12,
+                    'new_hotels' => 3,
+                    'avg_booking_value' => 60000
+                ],
+                [
+                    'month' => 'February 2024',
+                    'revenue' => 1800000,
+                    'bookings' => 30,
+                    'new_users' => 19,
+                    'new_hotels' => 2,
+                    'avg_booking_value' => 60000
+                ],
+                [
+                    'month' => 'March 2024',
+                    'revenue' => 2200000,
+                    'bookings' => 35,
+                    'new_users' => 15,
+                    'new_hotels' => 4,
+                    'avg_booking_value' => 62857
+                ]
+            ];
+            
+            $data = [
+                'title' => 'Reports & Analytics',
+                'metrics' => $metrics,
+                'chart_data' => $chart_data,
+                'top_hotels' => $top_hotels,
+                'monthly_data' => $monthly_data
+            ];
+            
+            echo View::renderWithLayout('admin/reports', $data);
+        } catch (Exception $e) {
+            $this->renderError($e->getMessage());
+        }
+    }
+    
+    public function hosts() {
+        try {
+            Auth::requireRole('admin');
+            
+            $hosts = $this->userService->getUsersByRole('host');
+            $subscriptions = $this->subscriptionService->getAllSubscriptions();
+            $hotels = $this->hotelService->getAllHotels();
+            $bookings = $this->bookingService->getAllBookings();
+            
+            // Calculate statistics
+            $stats = [
+                'total_hosts' => count($hosts),
+                'active_hosts' => count(array_filter($hosts, function($h) { return ($h['status'] ?? 'active') === 'active'; })),
+                'pending_approval' => count(array_filter($hotels, function($h) { return $h['status'] === 'pending'; })),
+                'total_hotels' => count($hotels)
+            ];
+            
+            // Add additional data to hosts
+            foreach ($hosts as &$host) {
+                // Find subscription
+                $hostSubscription = array_filter($subscriptions, function($s) use ($host) {
+                    return $s['host_id'] == $host['id'] && $s['status'] === 'active';
+                });
+                $host['subscription'] = !empty($hostSubscription) ? reset($hostSubscription) : null;
+                
+                // Count hotels
+                $hostHotels = array_filter($hotels, function($h) use ($host) {
+                    return $h['host_id'] == $host['id'];
+                });
+                $host['hotel_count'] = count($hostHotels);
+                $host['pending_hotels'] = count(array_filter($hostHotels, function($h) {
+                    return $h['status'] === 'pending';
+                }));
+                
+                // Count bookings and revenue
+                $hostBookings = array_filter($bookings, function($b) use ($hostHotels) {
+                    return in_array($b['hotel_id'], array_column($hostHotels, 'id'));
+                });
+                $host['booking_count'] = count($hostBookings);
+                $host['pending_bookings'] = count(array_filter($hostBookings, function($b) {
+                    return $b['status'] === 'pending';
+                }));
+                $host['total_revenue'] = array_sum(array_column($hostBookings, 'total_price'));
+                
+                // Mock verification status
+                $host['is_verified'] = rand(0, 1) == 1;
+            }
+            
+            $data = [
+                'title' => 'Host Management',
+                'hosts' => $hosts,
+                'stats' => $stats
+            ];
+            
+            echo View::renderWithLayout('admin/hosts', $data);
+        } catch (Exception $e) {
+            $this->renderError($e->getMessage());
+        }
+    }
+
     private function renderError($message) {
         echo "<h1>Error</h1>";
         echo "<p style='color: red;'>{$message}</p>";

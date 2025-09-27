@@ -11,41 +11,72 @@ class AuthController {
     public function login() {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             try {
+                // Validate CSRF token
+                if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+                    throw new Exception("Invalid request");
+                }
+                
                 $email = $_POST['email'] ?? '';
                 $password = $_POST['password'] ?? '';
                 
                 $user = $this->userService->login($email, $password);
                 
+                // Set success message
+                $_SESSION['success'] = 'Welcome back, ' . $user['name'] . '!';
+                
                 // Redirect based on role
                 $this->redirectAfterLogin($user['role']);
             } catch (Exception $e) {
-                $this->renderLogin(['error' => $e->getMessage()]);
+                $_SESSION['error'] = $e->getMessage();
+                $_SESSION['old_input'] = $_POST;
+                header('Location: ' . BASE_URL . '/login');
+                exit;
             }
         } else {
-            $this->renderLogin();
+            $data = [
+                'title' => 'Login'
+            ];
+            echo View::renderWithLayout('auth/login', $data);
         }
     }
     
     public function register() {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             try {
+                // Validate CSRF token
+                if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+                    throw new Exception("Invalid request");
+                }
+                
                 $data = [
                     'name' => $_POST['name'] ?? '',
                     'email' => $_POST['email'] ?? '',
                     'password' => $_POST['password'] ?? '',
                     'role' => $_POST['role'] ?? 'tourist',
-                    'phone' => $_POST['phone'] ?? ''
+                    'phone' => $_POST['phone'] ?? '',
+                    'hotel_name' => $_POST['hotel_name'] ?? '',
+                    'hotel_location' => $_POST['hotel_location'] ?? '',
+                    'hotel_description' => $_POST['hotel_description'] ?? ''
                 ];
                 
                 $user = $this->userService->register($data);
                 
+                // Set success message
+                $_SESSION['success'] = 'Account created successfully! Welcome, ' . $user['name'] . '!';
+                
                 // Redirect based on role
                 $this->redirectAfterLogin($user['role']);
             } catch (Exception $e) {
-                $this->renderRegister(['error' => $e->getMessage()]);
+                $_SESSION['error'] = $e->getMessage();
+                $_SESSION['old_input'] = $_POST;
+                header('Location: ' . BASE_URL . '/register');
+                exit;
             }
         } else {
-            $this->renderRegister();
+            $data = [
+                'title' => 'Register'
+            ];
+            echo View::renderWithLayout('auth/register', $data);
         }
     }
     
@@ -70,57 +101,4 @@ class AuthController {
         exit;
     }
     
-    private function renderLogin($data = []) {
-        // For now, simple output - will be replaced with proper views
-        echo "<h1>Login</h1>";
-        if (isset($data['error'])) {
-            echo "<p style='color: red;'>{$data['error']}</p>";
-        }
-        echo "<form method='POST'>
-            <div>
-                <label>Email:</label>
-                <input type='email' name='email' required>
-            </div>
-            <div>
-                <label>Password:</label>
-                <input type='password' name='password' required>
-            </div>
-            <button type='submit'>Login</button>
-        </form>";
-        echo "<a href='" . BASE_URL . "/register'>Register</a>";
-    }
-    
-    private function renderRegister($data = []) {
-        echo "<h1>Register</h1>";
-        if (isset($data['error'])) {
-            echo "<p style='color: red;'>{$data['error']}</p>";
-        }
-        echo "<form method='POST'>
-            <div>
-                <label>Name:</label>
-                <input type='text' name='name' required>
-            </div>
-            <div>
-                <label>Email:</label>
-                <input type='email' name='email' required>
-            </div>
-            <div>
-                <label>Password:</label>
-                <input type='password' name='password' required>
-            </div>
-            <div>
-                <label>Phone:</label>
-                <input type='text' name='phone'>
-            </div>
-            <div>
-                <label>Role:</label>
-                <select name='role'>
-                    <option value='tourist'>Tourist</option>
-                    <option value='host'>Host</option>
-                </select>
-            </div>
-            <button type='submit'>Register</button>
-        </form>";
-        echo "<a href='" . BASE_URL . "/login'>Login</a>";
-    }
 }

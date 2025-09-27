@@ -37,6 +37,11 @@ class User extends BaseModel {
             $data['role'] = 'tourist';
         }
         
+        // Set default status if not provided
+        if (!isset($data['status'])) {
+            $data['status'] = 'active';
+        }
+        
         return $this->create($data);
     }
     
@@ -50,5 +55,22 @@ class User extends BaseModel {
     public function changePassword($userId, $newPassword) {
         $hashedPassword = Auth::hashPassword($newPassword);
         return $this->update($userId, ['password' => $hashedPassword]);
+    }
+    
+    public function updateStatus($userId, $status) {
+        $validStatuses = ['active', 'inactive', 'blocked'];
+        if (!in_array($status, $validStatuses)) {
+            throw new Exception("Invalid status");
+        }
+        
+        return $this->update($userId, ['status' => $status]);
+    }
+    
+    public function findByStatus($status) {
+        return $this->findAll(['status' => $status]);
+    }
+    
+    public function updateLastLogin($userId) {
+        return $this->update($userId, ['last_login' => date('Y-m-d H:i:s')]);
     }
 }

@@ -42,9 +42,17 @@ class UserService {
             throw new Exception("Invalid email or password");
         }
         
+        // Check if user is active
+        if ($user['status'] !== 'active') {
+            throw new Exception("Account is not active. Please contact support.");
+        }
+        
         if (!Auth::verifyPassword($password, $user['password'])) {
             throw new Exception("Invalid email or password");
         }
+        
+        // Update last login
+        $this->userModel->updateLastLogin($user['id']);
         
         Auth::login($user);
         return $user;
@@ -99,5 +107,30 @@ class UserService {
     public function getUsersByRole($role) {
         Auth::requireRole('admin');
         return $this->userModel->findByRole($role);
+    }
+    
+    public function updateUserStatus($userId, $status) {
+        Auth::requireRole('admin');
+        return $this->userModel->updateStatus($userId, $status);
+    }
+    
+    public function blockUser($userId) {
+        Auth::requireRole('admin');
+        return $this->userModel->updateStatus($userId, 'blocked');
+    }
+    
+    public function unblockUser($userId) {
+        Auth::requireRole('admin');
+        return $this->userModel->updateStatus($userId, 'active');
+    }
+    
+    public function activateUser($userId) {
+        Auth::requireRole('admin');
+        return $this->userModel->updateStatus($userId, 'active');
+    }
+    
+    public function deactivateUser($userId) {
+        Auth::requireRole('admin');
+        return $this->userModel->updateStatus($userId, 'inactive');
     }
 }

@@ -18,15 +18,29 @@ class HostController {
         try {
             Auth::requireRole('host');
             
+            $user = Auth::getCurrentUser();
             $hotels = $this->hotelService->getMyHotels();
-            $pendingBookings = $this->bookingService->getPendingBookings();
+            $recent_bookings = $this->bookingService->getMyBookings();
             $subscription = $this->subscriptionService->getMySubscription();
             
-            $this->renderDashboard([
+            // Calculate statistics
+            $stats = [
+                'total_hotels' => count($hotels),
+                'total_bookings' => count($recent_bookings),
+                'pending_bookings' => count(array_filter($recent_bookings, function($b) { return $b['status'] === 'pending'; })),
+                'total_revenue' => array_sum(array_column($recent_bookings, 'total_price'))
+            ];
+            
+            $data = [
+                'title' => 'Host Dashboard',
+                'user' => $user,
                 'hotels' => $hotels,
-                'pendingBookings' => $pendingBookings,
-                'subscription' => $subscription
-            ]);
+                'recent_bookings' => array_slice($recent_bookings, 0, 5),
+                'subscription' => $subscription,
+                'stats' => $stats
+            ];
+            
+            echo View::renderWithLayout('host/dashboard', $data);
         } catch (Exception $e) {
             $this->renderError($e->getMessage());
         }
@@ -37,7 +51,12 @@ class HostController {
             Auth::requireRole('host');
             $hotels = $this->hotelService->getMyHotels();
             
-            $this->renderHotels(['hotels' => $hotels]);
+            $data = [
+                'title' => 'My Hotels',
+                'hotels' => $hotels
+            ];
+            
+            echo View::renderWithLayout('host/hotels', $data);
         } catch (Exception $e) {
             $this->renderError($e->getMessage());
         }
@@ -158,8 +177,24 @@ class HostController {
         try {
             Auth::requireRole('host');
             $bookings = $this->bookingService->getMyBookings();
+            $hotels = $this->hotelService->getMyHotels();
             
-            $this->renderBookings(['bookings' => $bookings]);
+            // Calculate booking statistics
+            $stats = [
+                'pending' => count(array_filter($bookings, function($b) { return $b['status'] === 'pending'; })),
+                'approved' => count(array_filter($bookings, function($b) { return $b['status'] === 'approved'; })),
+                'rejected' => count(array_filter($bookings, function($b) { return $b['status'] === 'rejected'; })),
+                'cancelled' => count(array_filter($bookings, function($b) { return $b['status'] === 'cancelled'; }))
+            ];
+            
+            $data = [
+                'title' => 'Hotel Bookings',
+                'bookings' => $bookings,
+                'hotels' => $hotels,
+                'stats' => $stats
+            ];
+            
+            echo View::renderWithLayout('host/bookings', $data);
         } catch (Exception $e) {
             $this->renderError($e->getMessage());
         }
@@ -495,6 +530,198 @@ class HostController {
         echo "</form>";
     }
     
+    public function profile() {
+        try {
+            Auth::requireRole('host');
+            
+            $currentUser = Auth::getCurrentUser();
+            $subscription = $this->subscriptionService->getMySubscription();
+            
+            // Get user stats
+            $hotels = $this->hotelService->getMyHotels();
+            $bookings = $this->bookingService->getMyBookings();
+            
+            $stats = [
+                'total_hotels' => count($hotels),
+                'total_bookings' => count($bookings),
+                'pending_bookings' => count(array_filter($bookings, function($b) { return $b['status'] === 'pending'; })),
+                'total_revenue' => array_sum(array_column($bookings, 'total_price'))
+            ];
+            
+            // Mock recent activity
+            $recent_activity = [
+                [
+                    'icon' => 'hotel',
+                    'color' => 'primary',
+                    'description' => 'Added new hotel: ' . ($hotels[0]['name'] ?? 'New Hotel'),
+                    'time' => '2 hours ago'
+                ],
+                [
+                    'icon' => 'calendar-check',
+                    'color' => 'success',
+                    'description' => 'Approved booking for ' . ($hotels[0]['name'] ?? 'Hotel'),
+                    'time' => '1 day ago'
+                ],
+                [
+                    'icon' => 'user-plus',
+                    'color' => 'info',
+                    'description' => 'New guest registered',
+                    'time' => '3 days ago'
+                ]
+            ];
+            
+            $data = [
+                'title' => 'My Profile',
+                'user' => $currentUser,
+                'subscription' => $subscription,
+                'stats' => $stats,
+                'recent_activity' => $recent_activity
+            ];
+            
+            echo View::renderWithLayout('host/profile', $data);
+        } catch (Exception $e) {
+            $this->renderError($e->getMessage());
+        }
+    }
+    
+    public function calendar() {
+        try {
+            Auth::requireRole('host');
+            
+            $currentUser = Auth::getCurrentUser();
+            $hotels = $this->hotelService->getMyHotels();
+            $bookings = $this->bookingService->getMyBookings();
+            
+            // Get all rooms for all hotels
+            $rooms = [];
+            foreach ($hotels as $hotel) {
+                $hotelRooms = $this->hotelService->getHotelRooms($hotel['id']);
+                foreach ($hotelRooms as $room) {
+                    $room['hotel_name'] = $hotel['name'];
+                    $rooms[] = $room;
+                }
+            }
+            
+            // Get today's bookings
+            $today = date('Y-m-d');
+            $today_bookings = array_filter($bookings, function($b) use ($today) {
+                return $b['check_in'] === $today || $b['check_out'] === $today;
+            });
+            
+            // Calculate month stats
+            $currentMonth = date('Y-m');
+            $month_bookings = array_filter($bookings, function($b) use ($currentMonth) {
+                return strpos($b['check_in'], $currentMonth) === 0;
+            });
+            
+            $month_stats = [
+                'total_bookings' => count($month_bookings),
+                'occupancy_rate' => min(100, (count($month_bookings) / max(1, count($rooms) * 30)) * 100),
+                'pending_bookings' => count(array_filter($month_bookings, function($b) { return $b['status'] === 'pending'; })),
+                'revenue' => array_sum(array_column($month_bookings, 'total_price'))
+            ];
+            
+            // Mock calendar bookings data
+            $calendar_bookings = [];
+            foreach ($bookings as $booking) {
+                $checkIn = new DateTime($booking['check_in']);
+                $checkOut = new DateTime($booking['check_out']);
+                
+                while ($checkIn < $checkOut) {
+                    $calendar_bookings[] = [
+                        'date' => $checkIn->format('Y-m-d'),
+                        'title' => $booking['hotel_name'] . ' - ' . $booking['room_type'],
+                        'status' => $booking['status'] === 'approved' ? 'booked' : 'partial',
+                        'id' => $booking['id']
+                    ];
+                    $checkIn->add(new DateInterval('P1D'));
+                }
+            }
+            
+            $data = [
+                'title' => 'Booking Calendar',
+                'hotels' => $hotels,
+                'rooms' => $rooms,
+                'bookings' => $calendar_bookings,
+                'today_bookings' => $today_bookings,
+                'month_stats' => $month_stats
+            ];
+            
+            echo View::renderWithLayout('host/calendar', $data);
+        } catch (Exception $e) {
+            $this->renderError($e->getMessage());
+        }
+    }
+    
+    public function updateProfile() {
+        try {
+            Auth::requireRole('host');
+            
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                throw new Exception("Method not allowed");
+            }
+            
+            // CSRF validation
+            if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== View::csrfToken()) {
+                throw new Exception("Invalid CSRF token");
+            }
+            
+            $currentUser = Auth::getCurrentUser();
+            $data = [
+                'name' => $_POST['name'] ?? '',
+                'phone' => $_POST['phone'] ?? '',
+                'business_name' => $_POST['business_name'] ?? '',
+                'business_type' => $_POST['business_type'] ?? '',
+                'license_number' => $_POST['license_number'] ?? '',
+                'tax_id' => $_POST['tax_id'] ?? ''
+            ];
+            
+            $this->userService->updateProfile($currentUser['id'], $data);
+            
+            $_SESSION['success'] = 'Profile updated successfully!';
+            header('Location: ' . BASE_URL . '/host/profile');
+            exit;
+        } catch (Exception $e) {
+            $_SESSION['error'] = $e->getMessage();
+            header('Location: ' . BASE_URL . '/host/profile');
+            exit;
+        }
+    }
+    
+    public function changePassword() {
+        try {
+            Auth::requireRole('host');
+            
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                throw new Exception("Method not allowed");
+            }
+            
+            // CSRF validation
+            if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== View::csrfToken()) {
+                throw new Exception("Invalid CSRF token");
+            }
+            
+            $currentPassword = $_POST['current_password'] ?? '';
+            $newPassword = $_POST['new_password'] ?? '';
+            $confirmPassword = $_POST['confirm_password'] ?? '';
+            
+            if ($newPassword !== $confirmPassword) {
+                throw new Exception("New passwords do not match");
+            }
+            
+            $currentUser = Auth::getCurrentUser();
+            $this->userService->changePassword($currentUser['id'], $currentPassword, $newPassword);
+            
+            $_SESSION['success'] = 'Password changed successfully!';
+            header('Location: ' . BASE_URL . '/host/profile');
+            exit;
+        } catch (Exception $e) {
+            $_SESSION['error'] = $e->getMessage();
+            header('Location: ' . BASE_URL . '/host/profile');
+            exit;
+        }
+    }
+
     private function renderError($message) {
         echo "<h1>Error</h1>";
         echo "<p style='color: red;'>{$message}</p>";
