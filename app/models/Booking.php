@@ -8,8 +8,48 @@ class Booking extends BaseModel {
         return $this->findAll(['tourist_id' => $touristId]);
     }
     
+    public function findByTouristWithHotel($touristId) {
+        $sql = "SELECT b.*, 
+                       h.name as hotel_name, 
+                       h.location as hotel_location, 
+                       h.image_url as hotel_image,
+                       r.room_type as room_type
+                FROM bookings b
+                LEFT JOIN hotels h ON b.hotel_id = h.id
+                LEFT JOIN rooms r ON b.room_id = r.id
+                WHERE b.tourist_id = :tourist_id
+                ORDER BY b.created_at DESC";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->bindValue(':tourist_id', $touristId);
+        $stmt->execute();
+        return $stmt->fetchAll();
+    }
+    
     public function findByHotel($hotelId) {
         return $this->findAll(['hotel_id' => $hotelId]);
+    }
+    
+    public function findByHotelWithDetails($hotelId) {
+        $sql = "SELECT b.*, 
+                       h.name as hotel_name, 
+                       h.location as hotel_location, 
+                       h.image_url as hotel_image,
+                       r.room_type as room_type,
+                       u.name as guest_name,
+                       u.email as guest_email,
+                       u.phone as guest_phone
+                FROM bookings b
+                LEFT JOIN hotels h ON b.hotel_id = h.id
+                LEFT JOIN rooms r ON b.room_id = r.id
+                LEFT JOIN users u ON b.tourist_id = u.id
+                WHERE b.hotel_id = :hotel_id
+                ORDER BY b.created_at DESC";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->bindValue(':hotel_id', $hotelId);
+        $stmt->execute();
+        return $stmt->fetchAll();
     }
     
     public function findByStatus($status) {
@@ -64,29 +104,40 @@ class Booking extends BaseModel {
     }
     
     private function hasBookingConflict($hotelId, $roomId, $checkIn, $checkOut) {
-        $sql = "SELECT COUNT(*) FROM bookings 
-                WHERE hotel_id = :hotel_id 
-                AND (:room_id IS NULL OR room_id = :room_id)
-                AND status IN ('pending', 'approved')
-                AND (
-                    (check_in <= :check_in AND check_out > :check_in) OR
-                    (check_in < :check_out AND check_out >= :check_out) OR
-                    (check_in >= :check_in AND check_out <= :check_out)
-                )";
+        if ($roomId === null || $roomId === '') {
+            // Check for any room conflicts in the hotel
+            $sql = "SELECT COUNT(*) FROM bookings WHERE hotel_id = :hotel_id AND status IN ('pending', 'approved') AND ((check_in <= :check_in1 AND check_out > :check_in2) OR (check_in < :check_out1 AND check_out >= :check_out2) OR (check_in >= :check_in3 AND check_out <= :check_out3))";
+            
+            $stmt = $this->db->prepare($sql);
+            $stmt->bindValue(':hotel_id', $hotelId);
+            $stmt->bindValue(':check_in1', $checkIn);
+            $stmt->bindValue(':check_in2', $checkIn);
+            $stmt->bindValue(':check_in3', $checkIn);
+            $stmt->bindValue(':check_out1', $checkOut);
+            $stmt->bindValue(':check_out2', $checkOut);
+            $stmt->bindValue(':check_out3', $checkOut);
+        } else {
+            // Check for specific room conflicts
+            $sql = "SELECT COUNT(*) FROM bookings WHERE hotel_id = :hotel_id AND room_id = :room_id AND status IN ('pending', 'approved') AND ((check_in <= :check_in1 AND check_out > :check_in2) OR (check_in < :check_out1 AND check_out >= :check_out2) OR (check_in >= :check_in3 AND check_out <= :check_out3))";
+            
+            $stmt = $this->db->prepare($sql);
+            $stmt->bindValue(':hotel_id', $hotelId);
+            $stmt->bindValue(':room_id', $roomId);
+            $stmt->bindValue(':check_in1', $checkIn);
+            $stmt->bindValue(':check_in2', $checkIn);
+            $stmt->bindValue(':check_in3', $checkIn);
+            $stmt->bindValue(':check_out1', $checkOut);
+            $stmt->bindValue(':check_out2', $checkOut);
+            $stmt->bindValue(':check_out3', $checkOut);
+        }
         
-        $stmt = $this->db->prepare($sql);
-        $stmt->bindParam(':hotel_id', $hotelId);
-        $stmt->bindParam(':room_id', $roomId);
-        $stmt->bindParam(':check_in', $checkIn);
-        $stmt->bindParam(':check_out', $checkOut);
         $stmt->execute();
-        
         return $stmt->fetchColumn() > 0;
     }
     
     public function getBookingDetails($bookingId) {
         $sql = "SELECT b.*, h.name as hotel_name, h.location, 
-                       r.room_type, u.name as tourist_name, u.email as tourist_email
+                       r.room_type, u.name as guest_name, u.email as guest_email, u.phone as guest_phone
                 FROM bookings b
                 LEFT JOIN hotels h ON b.hotel_id = h.id
                 LEFT JOIN rooms r ON b.room_id = r.id
@@ -100,4 +151,3 @@ class Booking extends BaseModel {
         return $stmt->fetch();
     }
 }
-?>

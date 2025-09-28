@@ -73,103 +73,79 @@
                         </div>
                     </div>
                 </div>
-                
-                <!-- Quick Login for Demo -->
-                <div class="card mt-4">
-                    <div class="card-header">
-                        <h6 class="mb-0">Demo Accounts</h6>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-6">
-                                <button class="btn btn-sm btn-outline-success w-100 mb-2" 
-                                        onclick="demoLogin('tourist@demo.com', 'password')">
-                                    <i class="fas fa-user me-1"></i>Tourist
-                                </button>
-                            </div>
-                            <div class="col-6">
-                                <button class="btn btn-sm btn-outline-warning w-100 mb-2" 
-                                        onclick="demoLogin('host@demo.com', 'password')">
-                                    <i class="fas fa-hotel me-1"></i>Host
-                                </button>
-                            </div>
-                            <div class="col-6">
-                                <button class="btn btn-sm btn-outline-danger w-100" 
-                                        onclick="demoLogin('admin@demo.com', 'password')">
-                                    <i class="fas fa-crown me-1"></i>Admin
-                                </button>
-                            </div>
-                            <div class="col-6">
-                                <button class="btn btn-sm btn-outline-info w-100" 
-                                        onclick="demoLogin('guest@demo.com', 'password')">
-                                    <i class="fas fa-eye me-1"></i>Guest
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
     </div>
 </section>
 
 <script>
-$(document).ready(function() {
+// Pure vanilla JavaScript - no jQuery dependency
+document.addEventListener('DOMContentLoaded', function() {
     // Password toggle
-    $('#toggle-password').on('click', function() {
-        const passwordField = $('#password');
-        const icon = $(this).find('i');
-        
-        if (passwordField.attr('type') === 'password') {
-            passwordField.attr('type', 'text');
-            icon.removeClass('fa-eye').addClass('fa-eye-slash');
-        } else {
-            passwordField.attr('type', 'password');
-            icon.removeClass('fa-eye-slash').addClass('fa-eye');
-        }
-    });
+    const togglePasswordBtn = document.getElementById('toggle-password');
+    if (togglePasswordBtn) {
+        togglePasswordBtn.addEventListener('click', function() {
+            const passwordField = document.getElementById('password');
+            const icon = this.querySelector('i');
+            
+            if (passwordField.type === 'password') {
+                passwordField.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                passwordField.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        });
+    }
     
     // Form validation
-    $('#login-form').on('submit', function(e) {
-        if (!validateLoginForm()) {
-            e.preventDefault();
-        }
-    });
+    const loginForm = document.getElementById('login-form');
+    if (loginForm) {
+        loginForm.addEventListener('submit', function(e) {
+            if (!validateLoginForm()) {
+                e.preventDefault();
+            }
+        });
+    }
 });
 
 function validateLoginForm() {
     let isValid = true;
     
     // Clear previous errors
-    $('.is-invalid').removeClass('is-invalid');
-    $('.invalid-feedback').remove();
+    const invalidFields = document.querySelectorAll('.is-invalid');
+    invalidFields.forEach(field => field.classList.remove('is-invalid'));
+    
+    const invalidFeedbacks = document.querySelectorAll('.invalid-feedback');
+    invalidFeedbacks.forEach(feedback => feedback.remove());
     
     // Email validation
-    const email = $('#email').val();
+    const emailField = document.getElementById('email');
+    const email = emailField.value;
     if (!email || !isValidEmail(email)) {
-        showFieldError($('#email'), 'Please enter a valid email address');
+        showFieldError(emailField, 'Please enter a valid email address');
         isValid = false;
     }
     
     // Password validation
-    const password = $('#password').val();
+    const passwordField = document.getElementById('password');
+    const password = passwordField.value;
     if (!password || password.length < 6) {
-        showFieldError($('#password'), 'Password must be at least 6 characters');
+        showFieldError(passwordField, 'Password must be at least 6 characters');
         isValid = false;
     }
     
     return isValid;
 }
 
-function demoLogin(email, password) {
-    $('#email').val(email);
-    $('#password').val(password);
-    $('#login-form').submit();
-}
-
-function showFieldError($field, message) {
-    $field.addClass('is-invalid');
-    $field.after(`<div class="invalid-feedback">${message}</div>`);
+function showFieldError(field, message) {
+    field.classList.add('is-invalid');
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'invalid-feedback';
+    errorDiv.textContent = message;
+    field.parentNode.insertBefore(errorDiv, field.nextSibling);
 }
 
 function isValidEmail(email) {
@@ -192,14 +168,5 @@ function isValidEmail(email) {
 
 .input-group .btn {
     border-left: none;
-}
-
-.demo-accounts {
-    font-size: 0.9rem;
-}
-
-.demo-accounts .btn {
-    font-size: 0.8rem;
-    padding: 0.5rem;
 }
 </style>

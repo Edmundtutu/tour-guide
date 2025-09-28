@@ -19,101 +19,71 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Statistics Cards -->
-        <div class="row mb-5">
-            <div class="col-md-3 mb-3">
-                <div class="card dashboard-card">
-                    <div class="card-body text-center">
-                        <div class="dashboard-stat">
-                            <div class="stat-number"><?= $stats['total_users'] ?? 0 ?></div>
-                            <div class="stat-label">Total Users</div>
-                        </div>
-                        <i class="fas fa-users fa-2x text-primary mt-3"></i>
-                    </div>
+        <div class="minimalist-grid">
+            <div class="stat-item">
+                <div class="stat-number"><?php echo $stats['total_users'] ?? 0?></div>
+                <div class="stat-label">Total Users</div>
+                <div class="stat-change positive">
+                    ▲+12%
                 </div>
             </div>
-            <div class="col-md-3 mb-3">
-                <div class="card dashboard-card">
-                    <div class="card-body text-center">
-                        <div class="dashboard-stat">
-                            <div class="stat-number"><?= $stats['total_hotels'] ?? 0 ?></div>
-                            <div class="stat-label">Total Hotels</div>
-                        </div>
-                        <i class="fas fa-hotel fa-2x text-success mt-3"></i>
-                    </div>
+            <div class="stat-item">
+                <div class="stat-number"><?php echo $stats['total_hotels'] ?? 0?></div>
+                <div class="stat-label">Total Hotels</div>
+                <div class="stat-change positive">
+                    ▲+8%
                 </div>
             </div>
-            <div class="col-md-3 mb-3">
-                <div class="card dashboard-card">
-                    <div class="card-body text-center">
-                        <div class="dashboard-stat">
-                            <div class="stat-number"><?= $stats['total_bookings'] ?? 0 ?></div>
-                            <div class="stat-label">Total Bookings</div>
-                        </div>
-                        <i class="fas fa-calendar-check fa-2x text-warning mt-3"></i>
-                    </div>
+            <div class="stat-item">
+                <div class="stat-number"><?php echo $stats['total_bookings'] ?? 0?></div>
+                <div class="stat-label">Total Bookings</div>
+                <div class="stat-change positive">
+                    ▲+15%
                 </div>
             </div>
-            <div class="col-md-3 mb-3">
-                <div class="card dashboard-card">
-                    <div class="card-body text-center">
-                        <div class="dashboard-stat">
-                            <div class="stat-number">UGX <?= number_format($stats['total_revenue'] ?? 0) ?></div>
-                            <div class="stat-label">Total Revenue</div>
-                        </div>
-                        <i class="fas fa-money-bill-wave fa-2x text-info mt-3"></i>
-                    </div>
+            <div class="stat-item">
+                <div class="stat-number">UGX <?php echo number_format($stats['total_revenue'] ?? 0)?></div>
+                <div class="stat-label">Total Revenue</div>
+                <div class="stat-change positive">
+                    ▲+22%
                 </div>
             </div>
         </div>
-        
+
         <!-- Additional Stats -->
-        <div class="row mb-5">
-            <div class="col-md-3 mb-3">
-                <div class="card dashboard-card">
-                    <div class="card-body text-center">
-                        <div class="dashboard-stat">
-                            <div class="stat-number"><?= $stats['pending_hotels'] ?? 0 ?></div>
-                            <div class="stat-label">Pending Hotels</div>
-                        </div>
-                        <i class="fas fa-clock fa-2x text-warning mt-3"></i>
-                    </div>
+        <div class="minimalist-grid">
+            <div class="stat-item">
+                <div class="stat-number"><?php echo $stats['pending_hotels'] ?? 0?></div>
+                <div class="stat-label">Pending Hotels</div>
+                <div class="stat-change neutral">
+                    <i class="fas fa-minus me-1"></i>0%
                 </div>
             </div>
-            <div class="col-md-3 mb-3">
-                <div class="card dashboard-card">
-                    <div class="card-body text-center">
-                        <div class="dashboard-stat">
-                            <div class="stat-number"><?= $stats['active_subscriptions'] ?? 0 ?></div>
-                            <div class="stat-label">Active Subscriptions</div>
-                        </div>
-                        <i class="fas fa-credit-card fa-2x text-success mt-3"></i>
-                    </div>
+            <div class="stat-item">
+                <div class="stat-number"><?php echo $stats['active_subscriptions'] ?? 0?></div>
+                <div class="stat-label">Active Subscriptions</div>
+                <div class="stat-change positive">
+                    ▲+5%
                 </div>
             </div>
-            <div class="col-md-3 mb-3">
-                <div class="card dashboard-card">
-                    <div class="card-body text-center">
-                        <div class="stat-number"><?= $stats['new_users_today'] ?? 0 ?></div>
-                        <div class="stat-label">New Users Today</div>
-                    </div>
-                    <i class="fas fa-user-plus fa-2x text-info mt-3"></i>
+            <div class="stat-item">
+                <div class="stat-number"><?php echo $stats['new_users_today'] ?? 0?></div>
+                <div class="stat-label">New Users Today</div>
+                <div class="stat-change positive">
+                    ▲+3%
                 </div>
             </div>
-            <div class="col-md-3 mb-3">
-                <div class="card dashboard-card">
-                    <div class="card-body text-center">
-                        <div class="dashboard-stat">
-                            <div class="stat-number"><?= $stats['system_health'] ?? 'Good' ?></div>
-                            <div class="stat-label">System Health</div>
-                        </div>
-                        <i class="fas fa-heartbeat fa-2x text-success mt-3"></i>
-                    </div>
+            <div class="stat-item">
+                <div class="stat-number"><?php echo $stats['system_health'] ?? 'Good'?></div>
+                <div class="stat-label">System Health</div>
+                <div class="stat-change positive">
+                    <i class="fas fa-check me-1"></i>Optimal
                 </div>
             </div>
         </div>
-        
+
         <div class="row">
             <!-- Recent Activity -->
             <div class="col-lg-8 mb-4">
@@ -172,7 +142,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <!-- Quick Actions & System Status -->
             <div class="col-lg-4">
                 <!-- Quick Actions -->
@@ -184,22 +154,22 @@
                     </div>
                     <div class="card-body">
                         <div class="d-grid gap-2">
-                            <a href="<?= View::url('/admin/users') ?>" class="btn btn-primary">
+                            <a href="<?php echo View::url('/admin/users')?>" class="btn btn-primary">
                                 <i class="fas fa-users me-2"></i>Manage Users
                             </a>
-                            <a href="<?= View::url('/admin/hotels') ?>" class="btn btn-outline-primary">
+                            <a href="<?php echo View::url('/admin/hotels')?>" class="btn btn-outline-primary">
                                 <i class="fas fa-hotel me-2"></i>Manage Hotels
                             </a>
-                            <a href="<?= View::url('/admin/bookings') ?>" class="btn btn-outline-success">
+                            <a href="<?php echo View::url('/admin/bookings')?>" class="btn btn-outline-success">
                                 <i class="fas fa-calendar-check me-2"></i>View Bookings
                             </a>
-                            <a href="<?= View::url('/admin/subscriptions') ?>" class="btn btn-outline-warning">
+                            <a href="<?php echo View::url('/admin/subscriptions')?>" class="btn btn-outline-warning">
                                 <i class="fas fa-credit-card me-2"></i>Subscriptions
                             </a>
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- System Status -->
                 <div class="card mb-4">
                     <div class="card-header">
@@ -236,7 +206,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Pending Approvals -->
                 <div class="card">
                     <div class="card-header">
@@ -420,29 +390,70 @@ function rejectUser(userId) {
 </script>
 
 <style>
-.dashboard-card {
+
+/* Minimalist Grid Layout */
+.minimalist-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 2rem;
+    margin-bottom: 4rem;
+}
+
+.stat-item {
+    padding: 2rem 1.5rem;
+    text-align: center;
+    border: none;
+    background: transparent;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.stat-item::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 20%;
+    width: 60%;
+    height: 1px;
+    background: #e2e8f0;
     transition: all 0.3s ease;
 }
 
-.dashboard-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+.stat-item:hover::after {
+    width: 80%;
+    left: 10%;
+    background: #3b82f6;
+    height: 2px;
 }
 
-.dashboard-stat .stat-number {
+.stat-item:hover {
+    background: rgba(59, 130, 246, 0.02);
+}
+
+.stat-number {
     font-size: 2.5rem;
     font-weight: 700;
-    color: var(--primary-color);
+    color: #1e293b;
+    margin-bottom: 0.25rem;
+}
+
+.stat-label {
+    font-size: 0.9rem;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
     margin-bottom: 0.5rem;
 }
 
-.dashboard-stat .stat-label {
-    color: #6c757d;
-    font-weight: 500;
-    text-transform: uppercase;
+.stat-change {
     font-size: 0.85rem;
-    letter-spacing: 0.5px;
+    font-weight: 500;
 }
+
+.positive { color: #10b981; }
+.negative { color: #ef4444; }
+.neutral { color: #6b7280; }
+/* Custom stat cards styling is now handled by the minimalist-grid CSS above */
 
 .activity-timeline {
     max-height: 400px;
@@ -534,8 +545,8 @@ function rejectUser(userId) {
     .admin-actions {
         margin-top: 1rem;
     }
-    
-    .dashboard-stat .stat-number {
+
+    .stat-number {
         font-size: 2rem;
     }
 }

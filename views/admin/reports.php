@@ -441,7 +441,7 @@ function exportReport(format) {
     }
     
     // Create export URL
-    const exportUrl = `/admin/reports/export?format=${format}&from=${dateFrom}&to=${dateTo}&type=${reportType}`;
+    const exportUrl = `<?= BASE_URL ?>/admin/reports/export?format=${format}&from=${dateFrom}&to=${dateTo}&type=${reportType}`;
     
     // Open in new window to trigger download
     window.open(exportUrl, '_blank');

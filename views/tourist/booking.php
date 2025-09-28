@@ -50,7 +50,7 @@
                                            name="check_in" 
                                            required
                                            min="<?= date('Y-m-d') ?>"
-                                           value="<?= View::old('check_in') ?>">
+                                           value="<?= $form_data['check_in'] ?? View::old('check_in') ?>">
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label for="check_out" class="form-label">Check-out Date</label>
@@ -60,7 +60,7 @@
                                            name="check_out" 
                                            required
                                            min="<?= date('Y-m-d', strtotime('+1 day')) ?>"
-                                           value="<?= View::old('check_out') ?>">
+                                           value="<?= $form_data['check_out'] ?? View::old('check_out') ?>">
                                 </div>
                             </div>
                             
@@ -68,12 +68,11 @@
                                 <div class="col-md-6 mb-3">
                                     <label for="guests" class="form-label">Number of Guests</label>
                                     <select class="form-select" id="guests" name="guests" required>
-                                        <option value="">Select guests</option>
-                                        <option value="1" <?= View::old('guests') == '1' ? 'selected' : '' ?>>1 Guest</option>
-                                        <option value="2" <?= View::old('guests') == '2' ? 'selected' : '' ?>>2 Guests</option>
-                                        <option value="3" <?= View::old('guests') == '3' ? 'selected' : '' ?>>3 Guests</option>
-                                        <option value="4" <?= View::old('guests') == '4' ? 'selected' : '' ?>>4 Guests</option>
-                                        <option value="5" <?= View::old('guests') == '5' ? 'selected' : '' ?>>5+ Guests</option>
+                                        <option value="1" <?= ($form_data['guests'] ?? View::old('guests') ?: '1') == '1' ? 'selected' : '' ?>>1 Guest</option>
+                                        <option value="2" <?= ($form_data['guests'] ?? View::old('guests')) == '2' ? 'selected' : '' ?>>2 Guests</option>
+                                        <option value="3" <?= ($form_data['guests'] ?? View::old('guests')) == '3' ? 'selected' : '' ?>>3 Guests</option>
+                                        <option value="4" <?= ($form_data['guests'] ?? View::old('guests')) == '4' ? 'selected' : '' ?>>4 Guests</option>
+                                        <option value="5" <?= ($form_data['guests'] ?? View::old('guests')) == '5' ? 'selected' : '' ?>>5+ Guests</option>
                                     </select>
                                 </div>
                                 <div class="col-md-6 mb-3">
@@ -83,7 +82,7 @@
                                         <?php foreach ($rooms as $room): ?>
                                         <option value="<?= $room['id'] ?>" 
                                                 data-price="<?= $room['price'] ?>"
-                                                <?= View::old('room_id') == $room['id'] ? 'selected' : '' ?>>
+                                                <?= ($form_data['room_id'] ?? View::old('room_id')) == $room['id'] ? 'selected' : '' ?>>
                                             <?= htmlspecialchars($room['room_type']) ?> - 
                                             UGX <?= number_format($room['price']) ?>
                                         </option>
@@ -275,41 +274,59 @@
 </section>
 
 <script>
-$(document).ready(function() {
+// Pure vanilla JavaScript - no jQuery dependency
+document.addEventListener('DOMContentLoaded', function() {
     let currentStep = 1;
     const totalSteps = 3;
     
     // Step navigation
-    $('.booking-next').on('click', function() {
-        if (validateCurrentStep()) {
-            if (currentStep < totalSteps) {
-                currentStep++;
+    const nextButtons = document.querySelectorAll('.booking-next');
+    nextButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            if (validateCurrentStep()) {
+                if (currentStep < totalSteps) {
+                    currentStep++;
+                    showStep(currentStep);
+                    updateProgress();
+                }
+            }
+        });
+    });
+    
+    const prevButtons = document.querySelectorAll('.booking-prev');
+    prevButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            if (currentStep > 1) {
+                currentStep--;
                 showStep(currentStep);
                 updateProgress();
             }
-        }
-    });
-    
-    $('.booking-prev').on('click', function() {
-        if (currentStep > 1) {
-            currentStep--;
-            showStep(currentStep);
-            updateProgress();
-        }
+        });
     });
     
     function showStep(step) {
-        $('.booking-step').removeClass('active');
-        $(`#step-${step}`).addClass('active');
+        const steps = document.querySelectorAll('.booking-step');
+        steps.forEach(s => s.classList.remove('active'));
+        const targetStep = document.getElementById(`step-${step}`);
+        if (targetStep) {
+            targetStep.classList.add('active');
+        }
     }
     
     function updateProgress() {
-        $('.step').removeClass('active completed');
+        const stepIndicators = document.querySelectorAll('.step');
+        stepIndicators.forEach(step => {
+            step.classList.remove('active', 'completed');
+        });
+        
         for (let i = 1; i <= currentStep; i++) {
-            if (i < currentStep) {
-                $(`.step:nth-child(${i})`).addClass('completed');
-            } else {
-                $(`.step:nth-child(${i})`).addClass('active');
+            const stepElement = stepIndicators[i - 1];
+            if (stepElement) {
+                if (i < currentStep) {
+                    stepElement.classList.add('completed');
+                } else {
+                    stepElement.classList.add('active');
+                }
             }
         }
     }
@@ -319,9 +336,9 @@ $(document).ready(function() {
         
         if (currentStep === 1) {
             // Validate dates and guests
-            const checkIn = $('#check_in').val();
-            const checkOut = $('#check_out').val();
-            const guests = $('#guests').val();
+            const checkIn = document.getElementById('check_in').value;
+            const checkOut = document.getElementById('check_out').value;
+            const guests = document.getElementById('guests').value;
             
             if (!checkIn || !checkOut || !guests) {
                 showError('Please fill in all required fields');
@@ -332,9 +349,9 @@ $(document).ready(function() {
             }
         } else if (currentStep === 2) {
             // Validate guest information
-            const name = $('#guest_name').val();
-            const email = $('#guest_email').val();
-            const phone = $('#guest_phone').val();
+            const name = document.getElementById('guest_name').value;
+            const email = document.getElementById('guest_email').value;
+            const phone = document.getElementById('guest_phone').value;
             
             if (!name || !email || !phone) {
                 showError('Please fill in all required fields');
@@ -350,11 +367,19 @@ $(document).ready(function() {
     
     // Update booking summary
     function updateBookingSummary() {
-        const checkIn = $('#check_in').val();
-        const checkOut = $('#check_out').val();
-        const guests = $('#guests').val();
-        const roomId = $('#room_id').val();
-        const pricePerNight = roomId ? $('#room_id option:selected').data('price') : <?= $hotel['price_per_night'] ?>;
+        const checkIn = document.getElementById('check_in').value;
+        const checkOut = document.getElementById('check_out').value;
+        const guests = document.getElementById('guests').value;
+        const roomSelect = document.getElementById('room_id');
+        const roomId = roomSelect ? roomSelect.value : null;
+        
+        let pricePerNight = <?= $hotel['price_per_night'] ?>;
+        if (roomId && roomSelect) {
+            const selectedOption = roomSelect.options[roomSelect.selectedIndex];
+            if (selectedOption && selectedOption.dataset.price) {
+                pricePerNight = parseFloat(selectedOption.dataset.price);
+            }
+        }
         
         if (checkIn && checkOut) {
             const nights = calculateNights(checkIn, checkOut);
@@ -362,71 +387,108 @@ $(document).ready(function() {
             const tax = subtotal * 0.18;
             const total = subtotal + tax;
             
-            $('#summary-checkin').text(formatDate(checkIn));
-            $('#summary-checkout').text(formatDate(checkOut));
-            $('#summary-guests').text(guests + ' guest' + (guests > 1 ? 's' : ''));
-            $('#summary-price-per-night').text('UGX ' + pricePerNight.toLocaleString());
-            $('#summary-nights').text(nights);
-            $('#summary-subtotal').text('UGX ' + subtotal.toLocaleString());
-            $('#summary-tax').text('UGX ' + tax.toLocaleString());
-            $('#summary-total').text('UGX ' + total.toLocaleString());
+            updateElement('summary-checkin', formatDate(checkIn));
+            updateElement('summary-checkout', formatDate(checkOut));
+            updateElement('summary-guests', guests + ' guest' + (guests > 1 ? 's' : ''));
+            updateElement('summary-price-per-night', 'UGX ' + pricePerNight.toLocaleString());
+            updateElement('summary-nights', nights);
+            updateElement('summary-subtotal', 'UGX ' + subtotal.toLocaleString());
+            updateElement('summary-tax', 'UGX ' + tax.toLocaleString());
+            updateElement('summary-total', 'UGX ' + total.toLocaleString());
+        }
+    }
+    
+    function updateElement(id, text) {
+        const element = document.getElementById(id);
+        if (element) {
+            element.textContent = text;
         }
     }
     
     // Update summary when form changes
-    $('#check_in, #check_out, #guests, #room_id').on('change', updateBookingSummary);
+    const formInputs = ['check_in', 'check_out', 'guests', 'room_id'];
+    formInputs.forEach(inputId => {
+        const input = document.getElementById(inputId);
+        if (input) {
+            input.addEventListener('change', updateBookingSummary);
+        }
+    });
     
     // Date validation
-    $('#check_in').on('change', function() {
-        const checkIn = new Date($(this).val());
-        const minCheckOut = new Date(checkIn);
-        minCheckOut.setDate(minCheckOut.getDate() + 1);
-        
-        $('#check_out').attr('min', minCheckOut.toISOString().split('T')[0]);
-        
-        if (new Date($('#check_out').val()) <= checkIn) {
-            $('#check_out').val('');
-        }
-    });
+    const checkInInput = document.getElementById('check_in');
+    if (checkInInput) {
+        checkInInput.addEventListener('change', function() {
+            const checkIn = new Date(this.value);
+            const minCheckOut = new Date(checkIn);
+            minCheckOut.setDate(minCheckOut.getDate() + 1);
+            
+            const checkOutInput = document.getElementById('check_out');
+            if (checkOutInput) {
+                checkOutInput.setAttribute('min', minCheckOut.toISOString().split('T')[0]);
+                
+                if (new Date(checkOutInput.value) <= checkIn) {
+                    checkOutInput.value = '';
+                }
+            }
+        });
+    }
     
     // Form submission
-    $('#booking-form').on('submit', function(e) {
-        e.preventDefault();
-        
-        if (validateCurrentStep()) {
-            showLoading();
+    const bookingForm = document.getElementById('booking-form');
+    if (bookingForm) {
+        bookingForm.addEventListener('submit', function(e) {
+            e.preventDefault();
             
-            const formData = new FormData(this);
-            
-            $.ajax({
-                url: $(this).attr('action'),
-                method: 'POST',
-                data: formData,
-                processData: false,
-                contentType: false,
-                success: function(response) {
+            if (validateCurrentStep()) {
+                showLoading();
+                
+                // Collect all form data from all steps
+                const formData = new FormData();
+                
+                // Get all form inputs from all steps
+                const allInputs = this.querySelectorAll('input, select, textarea');
+                allInputs.forEach(input => {
+                    if (input.name && input.value !== '') {
+                        formData.append(input.name, input.value);
+                    }
+                });
+                
+                // Form data is ready for submission
+                
+                fetch(this.action, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => {
+                    // Check if response is JSON
+                    const contentType = response.headers.get('content-type');
+                    if (contentType && contentType.includes('application/json')) {
+                        return response.json();
+                    } else {
+                        // If not JSON, get text to see what we got
+                        return response.text().then(text => {
+                            throw new Error('Server returned non-JSON response');
+                        });
+                    }
+                })
+                .then(data => {
                     hideLoading();
-                    if (response.success) {
+                    if (data.success) {
                         showSuccess('Booking confirmed! Redirecting...');
                         setTimeout(() => {
-                            window.location.href = response.redirect || '/my-bookings';
+                            window.location.href = data.redirect || '/my-bookings';
                         }, 2000);
                     } else {
-                        showError(response.message || 'Booking failed. Please try again.');
+                        showError(data.message || 'Booking failed. Please try again.');
                     }
-                },
-                error: function(xhr) {
+                })
+                .catch(error => {
                     hideLoading();
-                    const response = xhr.responseJSON;
-                    if (response && response.errors) {
-                        displayFormErrors(response.errors);
-                    } else {
-                        showError('Booking failed. Please try again.');
-                    }
-                }
-            });
-        }
-    });
+                    showError('Booking failed. Please try again.');
+                });
+            }
+        });
+    }
     
     // Utility functions
     function calculateNights(checkIn, checkOut) {
@@ -449,6 +511,119 @@ $(document).ready(function() {
         const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         return re.test(email);
     }
+    
+    function showError(message) {
+        // Remove existing alerts
+        const existingAlerts = document.querySelectorAll('.alert');
+        existingAlerts.forEach(alert => alert.remove());
+        
+        // Add new error alert
+        const alert = document.createElement('div');
+        alert.className = 'alert alert-danger alert-dismissible fade show';
+        alert.role = 'alert';
+        alert.innerHTML = `
+            <i class="fas fa-exclamation-circle me-2"></i>${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        const form = document.getElementById('booking-form');
+        if (form) {
+            form.insertBefore(alert, form.firstChild);
+        }
+        
+        // Auto-hide after 5 seconds
+        setTimeout(() => {
+            if (alert.parentNode) {
+                alert.remove();
+            }
+        }, 5000);
+    }
+    
+    function showSuccess(message) {
+        // Remove existing alerts
+        const existingAlerts = document.querySelectorAll('.alert');
+        existingAlerts.forEach(alert => alert.remove());
+        
+        // Add new success alert
+        const alert = document.createElement('div');
+        alert.className = 'alert alert-success alert-dismissible fade show';
+        alert.role = 'alert';
+        alert.innerHTML = `
+            <i class="fas fa-check-circle me-2"></i>${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        const form = document.getElementById('booking-form');
+        if (form) {
+            form.insertBefore(alert, form.firstChild);
+        }
+        
+        // Auto-hide after 5 seconds
+        setTimeout(() => {
+            if (alert.parentNode) {
+                alert.remove();
+            }
+        }, 5000);
+    }
+    
+    function showLoading() {
+        // Disable form and show loading
+        const form = document.getElementById('booking-form');
+        if (form) {
+            const inputs = form.querySelectorAll('input, button');
+            inputs.forEach(input => input.disabled = true);
+            
+            const loading = document.createElement('div');
+            loading.className = 'text-center py-4';
+            loading.innerHTML = `
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2">Processing your booking...</p>
+            `;
+            
+            form.insertBefore(loading, form.firstChild);
+        }
+    }
+    
+    function hideLoading() {
+        // Re-enable form and hide loading
+        const form = document.getElementById('booking-form');
+        if (form) {
+            const inputs = form.querySelectorAll('input, button');
+            inputs.forEach(input => input.disabled = false);
+            
+            const loading = form.querySelector('.spinner-border');
+            if (loading && loading.parentNode) {
+                loading.parentNode.remove();
+            }
+        }
+    }
+    
+    function displayFormErrors(errors) {
+        // Clear existing error messages
+        const existingErrors = document.querySelectorAll('.invalid-feedback');
+        existingErrors.forEach(error => error.remove());
+        
+        const invalidInputs = document.querySelectorAll('.is-invalid');
+        invalidInputs.forEach(input => input.classList.remove('is-invalid'));
+        
+        // Display new error messages
+        Object.keys(errors).forEach(field => {
+            const input = document.querySelector(`[name="${field}"]`);
+            if (input) {
+                input.classList.add('is-invalid');
+                
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'invalid-feedback';
+                errorDiv.textContent = errors[field];
+                input.parentNode.appendChild(errorDiv);
+            }
+        });
+    }
+    
+    // Initialize
+    updateBookingSummary();
 });
 </script>
 

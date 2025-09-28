@@ -1,29 +1,86 @@
 <!-- Hero Section -->
 <section class="hero-section">
-    <div class="container">
-        <div class="row align-items-center">
-            <div class="col-lg-6">
-                <div class="hero-content">
-                    <h1 class="hero-title">Discover Uganda's Beauty</h1>
-                    <p class="hero-subtitle">
-                        Find the perfect accommodation and explore amazing destinations across Uganda. 
-                        From the source of the Nile to the mountain gorillas, experience it all.
-                    </p>
-                    <div class="hero-buttons">
-                        <a href="<?= View::url('/hotels') ?>" class="btn btn-light btn-lg me-3">
-                            <i class="fas fa-hotel me-2"></i>Find Hotels
-                        </a>
-                        <a href="<?= View::url('/destinations') ?>" class="btn btn-outline-light btn-lg">
-                            <i class="fas fa-map-marker-alt me-2"></i>Explore Destinations
-                        </a>
-                    </div>
+    <div class="hero-container">
+        <!-- Left Column - Content -->
+        <div class="hero-content">
+            <div class="hero-badge">Discover Uganda's Beauty with ease</div>
+            <h1 class="hero-title">
+                Your Favourite<br>Tour Guide
+            </h1>
+            <p class="hero-description">
+                Find the perfect accommodation and explore amazing destinations across Uganda. 
+                From the source of the Nile to the mountain gorillas, experience it all.
+            </p>
+            
+            <div class="cta-buttons">
+                <a href="<?= View::url('/hotels') ?>" class="btn-primary hero-btn">
+                        <i class="fas fa-hotel me-2"></i>Find Hotels
+                    </a>
+                    <a href="<?= View::url('/destinations') ?>" class="btn-secondary hero-btn">
+                        <i class="fas fa-map-marker-alt me-2"></i>Explore Destinations
+                    </a>
+            </div>
+            
+            <div class="hero-stats">
+                <div class="stat-item">
+                    <div class="stat-number"><?php echo count($hotels); ?></div>
+                    <div class="stat-label">Accommodation Facilities</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number"><?php echo count($destinations); ?></div>
+                    <div class="stat-label">Destinations</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">98%</div>
+                    <div class="stat-label">Satisfaction Rate</div>
                 </div>
             </div>
-            <div class="col-lg-6">
-                <div class="hero-image">
-                    <img src="https://cf.bstatic.com/xdata/images/hotel/max1024x768/658262197.jpg?k=37dffa3a649328df73b209c1f0bb8c3a1809aec50b905fdf1e4a9e05991d165f&o=&hp=1"
-                         alt="Uganda Tourism" 
-                         class="img-fluid rounded-lg shadow-lg">
+        </div>
+        
+        <!-- Right Column - Carousel -->
+        <div class="hero-carousel">
+            <div class="carousel-container">
+                <div class="carousel-track">
+                    <!-- Carousel Item 1 -->
+                    <div class="carousel-item active">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/3/36/Murchison_Falls%2C_Uganda_%2823475021234%29.jpg" 
+                                alt="Mountain Landscape" class="carousel-image">
+                        <div class="carousel-caption">
+                            <div class="carousel-title">Murchison Falls National Pack</div>
+                            <div class="carousel-location">Northwestern Uganda</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Carousel Item 2 -->
+                    <div class="carousel-item">
+                        <img src="https://imageio.forbes.com/blogs-images/adriennejordan/files/2019/07/mu4.jpg?fit=bounds&format=jpg&height=600&width=1200" 
+                                alt="Beach Paradise" class="carousel-image">
+                        <div class="carousel-caption">
+                            <div class="carousel-title">Kidepo Valley National Park</div>
+                            <div class="carousel-location">Northeastern Uganda</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Carousel Item 3 -->
+                    <div class="carousel-item">
+                        <img src="https://destinationuganda.com/wp-content/uploads/2019/07/murchison-falls.jpg" 
+                                alt="Ancient City" class="carousel-image">
+                        <div class="carousel-caption">
+                            <div class="carousel-title">Source of the Nile</div>
+                            <div class="carousel-location">Eastern Uganda</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="carousel-arrows">
+                    <div class="arrow prev">❮</div>
+                    <div class="arrow next">❯</div>
+                </div>
+                
+                <div class="carousel-nav">
+                    <div class="nav-dot active" data-index="0"></div>
+                    <div class="nav-dot" data-index="1"></div>
+                    <div class="nav-dot" data-index="2"></div>
                 </div>
             </div>
         </div>
@@ -250,3 +307,123 @@
         </div>
     </div>
 </section>
+
+<script>
+    // Wait for DOM to be fully loaded and ensure no conflicts
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add a small delay to ensure all CSS is loaded
+        setTimeout(function() {
+            initializeHeroCarousel();
+        }, 100);
+    });
+    
+    function initializeHeroCarousel() {
+        const track = document.querySelector('.carousel-track');
+        const items = document.querySelectorAll('.carousel-item');
+        const dots = document.querySelectorAll('.nav-dot');
+        const prevBtn = document.querySelector('.arrow.prev');
+        const nextBtn = document.querySelector('.arrow.next');
+        
+        // Check if elements exist
+        if (!track || !items.length || !dots.length || !prevBtn || !nextBtn) {
+            console.warn('Hero carousel elements not found');
+            return;
+        }
+        
+        let currentIndex = 0;
+        const totalItems = items.length;
+        let autoSlide;
+        
+        // Function to update carousel position
+        function updateCarousel() {
+            if (!track) return;
+            
+            track.style.transform = `translateX(-${currentIndex * 100}%)`;
+            
+            // Update active classes
+            items.forEach((item, index) => {
+                item.classList.toggle('active', index === currentIndex);
+            });
+            
+            dots.forEach((dot, index) => {
+                dot.classList.toggle('active', index === currentIndex);
+            });
+        }
+        
+        // Next slide function
+        function nextSlide() {
+            currentIndex = (currentIndex + 1) % totalItems;
+            updateCarousel();
+        }
+        
+        // Previous slide function
+        function prevSlide() {
+            currentIndex = (currentIndex - 1 + totalItems) % totalItems;
+            updateCarousel();
+        }
+        
+        // Start auto-advance carousel
+        function startAutoSlide() {
+            autoSlide = setInterval(nextSlide, 5000);
+        }
+        
+        // Stop auto-advance carousel
+        function stopAutoSlide() {
+            if (autoSlide) {
+                clearInterval(autoSlide);
+            }
+        }
+        
+        // Initialize carousel
+        updateCarousel();
+        startAutoSlide();
+        
+        // Pause auto-slide on hover
+        const carouselContainer = document.querySelector('.carousel-container');
+        if (carouselContainer) {
+            carouselContainer.addEventListener('mouseenter', stopAutoSlide);
+            carouselContainer.addEventListener('mouseleave', startAutoSlide);
+        }
+        
+        // Event listeners for arrows
+        nextBtn.addEventListener('click', function() {
+            stopAutoSlide();
+            nextSlide();
+            setTimeout(startAutoSlide, 1000); // Resume after 1 second
+        });
+        
+        prevBtn.addEventListener('click', function() {
+            stopAutoSlide();
+            prevSlide();
+            setTimeout(startAutoSlide, 1000); // Resume after 1 second
+        });
+        
+        // Event listeners for dots
+        dots.forEach(dot => {
+            dot.addEventListener('click', function() {
+                stopAutoSlide();
+                currentIndex = parseInt(this.getAttribute('data-index'));
+                updateCarousel();
+                setTimeout(startAutoSlide, 1000); // Resume after 1 second
+            });
+        });
+        
+        // Keyboard navigation
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowLeft') {
+                stopAutoSlide();
+                prevSlide();
+                setTimeout(startAutoSlide, 1000);
+            } else if (e.key === 'ArrowRight') {
+                stopAutoSlide();
+                nextSlide();
+                setTimeout(startAutoSlide, 1000);
+            }
+        });
+        
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            updateCarousel();
+        });
+    }
+</script>

@@ -358,46 +358,84 @@
 </section>
 
 <script>
-$(document).ready(function() {
+// Pure vanilla JavaScript - no jQuery dependency
+document.addEventListener('DOMContentLoaded', function() {
     // Image gallery functionality
-    $('.thumbnail-img').on('click', function() {
-        $('.thumbnail-img').removeClass('active');
-        $(this).addClass('active');
-        $('#main-image').attr('src', $(this).data('src'));
+    const thumbnailImages = document.querySelectorAll('.thumbnail-img');
+    thumbnailImages.forEach(thumbnail => {
+        thumbnail.addEventListener('click', function() {
+            // Remove active class from all thumbnails
+            thumbnailImages.forEach(img => img.classList.remove('active'));
+            // Add active class to clicked thumbnail
+            this.classList.add('active');
+            // Update main image
+            const mainImage = document.getElementById('main-image');
+            if (mainImage) {
+                mainImage.src = this.dataset.src;
+            }
+        });
     });
     
     // Price calculation
     function calculatePrice() {
-        const checkIn = new Date($('#check_in').val());
-        const checkOut = new Date($('#check_out').val());
+        const checkInInput = document.getElementById('check_in');
+        const checkOutInput = document.getElementById('check_out');
         const pricePerNight = <?= $hotel['price_per_night'] ?>;
         
-        if (checkIn && checkOut && checkOut > checkIn) {
-            const nights = Math.ceil((checkOut - checkIn) / (1000 * 60 * 60 * 24));
-            const total = pricePerNight * nights;
+        if (checkInInput && checkOutInput) {
+            const checkIn = new Date(checkInInput.value);
+            const checkOut = new Date(checkOutInput.value);
             
-            $('#nights').text(nights);
-            $('#total-price').text('UGX ' + total.toLocaleString());
-        } else {
-            $('#nights').text('0');
-            $('#total-price').text('UGX 0');
+            if (checkIn && checkOut && checkOut > checkIn) {
+                const nights = Math.ceil((checkOut - checkIn) / (1000 * 60 * 60 * 24));
+                const total = pricePerNight * nights;
+                
+                updateElement('nights', nights);
+                updateElement('total-price', 'UGX ' + total.toLocaleString());
+            } else {
+                updateElement('nights', '0');
+                updateElement('total-price', 'UGX 0');
+            }
         }
     }
     
-    $('#check_in, #check_out').on('change', calculatePrice);
+    function updateElement(id, text) {
+        const element = document.getElementById(id);
+        if (element) {
+            element.textContent = text;
+        }
+    }
+    
+    // Add event listeners for price calculation
+    const checkInInput = document.getElementById('check_in');
+    const checkOutInput = document.getElementById('check_out');
+    
+    if (checkInInput) {
+        checkInInput.addEventListener('change', calculatePrice);
+    }
+    if (checkOutInput) {
+        checkOutInput.addEventListener('change', calculatePrice);
+    }
     
     // Date validation
-    $('#check_in').on('change', function() {
-        const checkIn = new Date($(this).val());
-        const minCheckOut = new Date(checkIn);
-        minCheckOut.setDate(minCheckOut.getDate() + 1);
-        
-        $('#check_out').attr('min', minCheckOut.toISOString().split('T')[0]);
-        
-        if (new Date($('#check_out').val()) <= checkIn) {
-            $('#check_out').val('');
-        }
-    });
+    if (checkInInput) {
+        checkInInput.addEventListener('change', function() {
+            const checkIn = new Date(this.value);
+            const minCheckOut = new Date(checkIn);
+            minCheckOut.setDate(minCheckOut.getDate() + 1);
+            
+            if (checkOutInput) {
+                checkOutInput.setAttribute('min', minCheckOut.toISOString().split('T')[0]);
+                
+                if (new Date(checkOutInput.value) <= checkIn) {
+                    checkOutInput.value = '';
+                }
+            }
+        });
+    }
+    
+    // Initialize price calculation
+    calculatePrice();
 });
 </script>
 

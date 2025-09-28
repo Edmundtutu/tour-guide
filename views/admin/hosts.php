@@ -193,10 +193,10 @@ $title = 'Host Management';
                                                 </div>
                                             </td>
                                             <td>
-                                                <?php if ($host['business_name']): ?>
+                                                <?php if (!empty($host['business_name'])): ?>
                                                     <div>
                                                         <strong><?= htmlspecialchars($host['business_name']) ?></strong>
-                                                        <?php if ($host['business_type']): ?>
+                                                        <?php if (!empty($host['business_type'])): ?>
                                                             <br><small class="text-muted"><?= ucfirst($host['business_type']) ?></small>
                                                         <?php endif; ?>
                                                     </div>
@@ -208,14 +208,14 @@ $title = 'Host Management';
                                                 <span class="badge bg-<?= $host['status'] === 'active' ? 'success' : ($host['status'] === 'blocked' ? 'danger' : 'secondary') ?>">
                                                     <?= ucfirst($host['status']) ?>
                                                 </span>
-                                                <?php if ($host['is_verified']): ?>
+                                                <?php if (!empty($host['is_verified'])): ?>
                                                     <br><small class="text-success"><i class="fas fa-check-circle"></i> Verified</small>
                                                 <?php else: ?>
                                                     <br><small class="text-warning"><i class="fas fa-exclamation-triangle"></i> Unverified</small>
                                                 <?php endif; ?>
                                             </td>
                                             <td>
-                                                <?php if ($host['subscription']): ?>
+                                                <?php if (!empty($host['subscription'])): ?>
                                                     <div>
                                                         <span class="badge bg-<?= $host['subscription']['status'] === 'active' ? 'success' : 'danger' ?>">
                                                             <?= ucfirst($host['subscription']['plan']) ?>
@@ -521,7 +521,7 @@ function verifyHost(hostId) {
     if (confirm('Are you sure you want to verify this host?')) {
         const form = document.createElement('form');
         form.method = 'POST';
-        form.action = '/admin/hosts/verify';
+        form.action = '<?= BASE_URL ?>/admin/hosts/verify';
         
         const csrfToken = document.createElement('input');
         csrfToken.type = 'hidden';
@@ -541,14 +541,14 @@ function verifyHost(hostId) {
 }
 
 function editHost(hostId) {
-    window.location.href = `/admin/hosts/${hostId}/edit`;
+    window.location.href = `<?= BASE_URL ?>/admin/edit-host?host_id=${hostId}`;
 }
 
 function blockHost(hostId) {
     if (confirm('Are you sure you want to block this host? This will prevent them from accessing their account.')) {
         const form = document.createElement('form');
         form.method = 'POST';
-        form.action = '/admin/hosts/block';
+        form.action = '<?= BASE_URL ?>/admin/hosts/block';
         
         const csrfToken = document.createElement('input');
         csrfToken.type = 'hidden';
@@ -573,11 +573,11 @@ function sendMessage(hostId) {
 }
 
 function viewHotels(hostId) {
-    window.location.href = `/admin/hotels?host_id=${hostId}`;
+    window.location.href = `<?= BASE_URL ?>/admin/hotels?host_id=${hostId}`;
 }
 
 function viewBookings(hostId) {
-    window.location.href = `/admin/bookings?host_id=${hostId}`;
+    window.location.href = `<?= BASE_URL ?>/admin/bookings?host_id=${hostId}`;
 }
 
 function executeBulkAction() {
@@ -599,7 +599,7 @@ function executeBulkAction() {
     if (confirm(`Are you sure you want to ${action} ${hostIds.length} host(s)?`)) {
         const form = document.createElement('form');
         form.method = 'POST';
-        form.action = '/admin/hosts/bulk-action';
+        form.action = '<?= BASE_URL ?>/admin/hosts/bulk-action';
         
         const csrfToken = document.createElement('input');
         csrfToken.type = 'hidden';

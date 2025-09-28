@@ -442,7 +442,7 @@ function renewSubscription(subscriptionId) {
         // Submit renewal request
         const form = document.createElement('form');
         form.method = 'POST';
-        form.action = '/admin/subscriptions/renew';
+        form.action = '<?= BASE_URL ?>/admin/subscriptions/renew';
         
         const csrfToken = document.createElement('input');
         csrfToken.type = 'hidden';
@@ -463,7 +463,7 @@ function renewSubscription(subscriptionId) {
 
 function editSubscription(subscriptionId) {
     // Redirect to edit page or show edit modal
-    window.location.href = `/admin/subscriptions/${subscriptionId}/edit`;
+    window.location.href = `<?= BASE_URL ?>/admin/subscriptions/${subscriptionId}/edit`;
 }
 
 function cancelSubscription(subscriptionId) {
@@ -471,7 +471,7 @@ function cancelSubscription(subscriptionId) {
         // Submit cancellation request
         const form = document.createElement('form');
         form.method = 'POST';
-        form.action = '/admin/subscriptions/cancel';
+        form.action = '<?= BASE_URL ?>/admin/subscriptions/cancel';
         
         const csrfToken = document.createElement('input');
         csrfToken.type = 'hidden';

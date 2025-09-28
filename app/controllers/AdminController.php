@@ -78,6 +78,256 @@ class AdminController {
         }
     }
     
+    public function getUser() {
+        try {
+            Auth::requireRole('admin');
+            
+            $userId = $_GET['user_id'] ?? null;
+            if (!$userId) {
+                throw new Exception("User ID required");
+            }
+            
+            $user = $this->userService->getUserById($userId);
+            if (!$user) {
+                throw new Exception("User not found");
+            }
+            
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => true,
+                'user' => $user
+            ]);
+        } catch (Exception $e) {
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => false,
+                'message' => $e->getMessage()
+            ]);
+        }
+    }
+    
+    public function viewUser() {
+        try {
+            Auth::requireRole('admin');
+            
+            $userId = $_GET['user_id'] ?? null;
+            if (!$userId) {
+                throw new Exception("User ID required");
+            }
+            
+            $user = $this->userService->getUserById($userId);
+            if (!$user) {
+                throw new Exception("User not found");
+            }
+            
+            $data = [
+                'title' => 'User Details',
+                'user' => $user
+            ];
+            
+            echo View::renderWithLayout('admin/view-user', $data);
+        } catch (Exception $e) {
+            $_SESSION['error'] = $e->getMessage();
+            header('Location: ' . BASE_URL . '/admin/users');
+            exit;
+        }
+    }
+    
+    public function editUser() {
+        try {
+            Auth::requireRole('admin');
+            
+            $userId = $_GET['user_id'] ?? null;
+            if (!$userId) {
+                throw new Exception("User ID required");
+            }
+            
+            $user = $this->userService->getUserById($userId);
+            if (!$user) {
+                throw new Exception("User not found");
+            }
+            
+            $data = [
+                'title' => 'Edit User',
+                'user' => $user
+            ];
+            
+            echo View::renderWithLayout('admin/edit-user', $data);
+        } catch (Exception $e) {
+            $_SESSION['error'] = $e->getMessage();
+            header('Location: ' . BASE_URL . '/admin/users');
+            exit;
+        }
+    }
+    
+    public function updateUser() {
+        try {
+            Auth::requireRole('admin');
+            
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                throw new Exception("Method not allowed");
+            }
+            
+            $userId = $_POST['user_id'] ?? null;
+            if (!$userId) {
+                throw new Exception("User ID required");
+            }
+            
+            $data = [
+                'name' => $_POST['name'] ?? '',
+                'email' => $_POST['email'] ?? '',
+                'phone' => $_POST['phone'] ?? '',
+                'role' => $_POST['role'] ?? '',
+                'status' => $_POST['status'] ?? ''
+            ];
+            
+            $this->userService->updateProfile($userId, $data);
+            
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => true,
+                'message' => 'User updated successfully!'
+            ]);
+        } catch (Exception $e) {
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => false,
+                'message' => $e->getMessage()
+            ]);
+        }
+    }
+    
+    public function blockUser() {
+        try {
+            Auth::requireRole('admin');
+            
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                throw new Exception("Method not allowed");
+            }
+            
+            $userId = $_POST['user_id'] ?? null;
+            if (!$userId) {
+                throw new Exception("User ID required");
+            }
+            
+            $this->userService->blockUser($userId);
+            
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => true,
+                'message' => 'User blocked successfully!'
+            ]);
+        } catch (Exception $e) {
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => false,
+                'message' => $e->getMessage()
+            ]);
+        }
+    }
+    
+    public function unblockUser() {
+        try {
+            Auth::requireRole('admin');
+            
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                throw new Exception("Method not allowed");
+            }
+            
+            $userId = $_POST['user_id'] ?? null;
+            if (!$userId) {
+                throw new Exception("User ID required");
+            }
+            
+            $this->userService->unblockUser($userId);
+            
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => true,
+                'message' => 'User unblocked successfully!'
+            ]);
+        } catch (Exception $e) {
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => false,
+                'message' => $e->getMessage()
+            ]);
+        }
+    }
+    
+    public function deleteUser() {
+        try {
+            Auth::requireRole('admin');
+            
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                throw new Exception("Method not allowed");
+            }
+            
+            $userId = $_POST['user_id'] ?? null;
+            if (!$userId) {
+                throw new Exception("User ID required");
+            }
+            
+            // Prevent admin from deleting themselves
+            $currentUser = Auth::getCurrentUser();
+            if ($currentUser['id'] == $userId) {
+                throw new Exception("You cannot delete your own account");
+            }
+            
+            $this->userService->deleteUser($userId);
+            
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => true,
+                'message' => 'User deleted successfully!'
+            ]);
+        } catch (Exception $e) {
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => false,
+                'message' => $e->getMessage()
+            ]);
+        }
+    }
+    
+    public function exportUsers() {
+        try {
+            Auth::requireRole('admin');
+            
+            $users = $this->userService->getAllUsers();
+            
+            // Set headers for CSV download
+            header('Content-Type: text/csv');
+            header('Content-Disposition: attachment; filename="users_' . date('Y-m-d') . '.csv"');
+            
+            $output = fopen('php://output', 'w');
+            
+            // CSV headers
+            fputcsv($output, ['ID', 'Name', 'Email', 'Phone', 'Role', 'Status', 'Created At', 'Last Login']);
+            
+            // CSV data
+            foreach ($users as $user) {
+                fputcsv($output, [
+                    $user['id'],
+                    $user['name'],
+                    $user['email'],
+                    $user['phone'] ?? '',
+                    $user['role'],
+                    $user['status'] ?? 'active',
+                    $user['created_at'],
+                    $user['last_login'] ?? ''
+                ]);
+            }
+            
+            fclose($output);
+            exit;
+        } catch (Exception $e) {
+            $_SESSION['error'] = $e->getMessage();
+            header('Location: ' . BASE_URL . '/admin/users');
+            exit;
+        }
+    }
+    
     public function hotels() {
         try {
             Auth::requireRole('admin');
@@ -486,6 +736,125 @@ class AdminController {
             echo View::renderWithLayout('admin/hosts', $data);
         } catch (Exception $e) {
             $this->renderError($e->getMessage());
+        }
+    }
+    
+    public function verifyHost() {
+        try {
+            Auth::requireRole('admin');
+            
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                throw new Exception("Method not allowed");
+            }
+            
+            $hostId = $_POST['host_id'] ?? null;
+            if (!$hostId) {
+                throw new Exception("Host ID required");
+            }
+            
+            // Update host verification status
+            $this->userService->updateProfile($hostId, ['is_verified' => 1]);
+            
+            $_SESSION['success'] = 'Host verified successfully!';
+            header('Location: ' . BASE_URL . '/admin/hosts');
+            exit;
+        } catch (Exception $e) {
+            $_SESSION['error'] = $e->getMessage();
+            header('Location: ' . BASE_URL . '/admin/hosts');
+            exit;
+        }
+    }
+    
+    public function blockHost() {
+        try {
+            Auth::requireRole('admin');
+            
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                throw new Exception("Method not allowed");
+            }
+            
+            $hostId = $_POST['host_id'] ?? null;
+            if (!$hostId) {
+                throw new Exception("Host ID required");
+            }
+            
+            $this->userService->blockUser($hostId);
+            
+            $_SESSION['success'] = 'Host blocked successfully!';
+            header('Location: ' . BASE_URL . '/admin/hosts');
+            exit;
+        } catch (Exception $e) {
+            $_SESSION['error'] = $e->getMessage();
+            header('Location: ' . BASE_URL . '/admin/hosts');
+            exit;
+        }
+    }
+    
+    public function editHost() {
+        try {
+            Auth::requireRole('admin');
+            
+            $hostId = $_GET['host_id'] ?? null;
+            if (!$hostId) {
+                throw new Exception("Host ID required");
+            }
+            
+            $host = $this->userService->getUserById($hostId);
+            if (!$host) {
+                throw new Exception("Host not found");
+            }
+            
+            $data = [
+                'title' => 'Edit Host',
+                'host' => $host
+            ];
+            
+            echo View::renderWithLayout('admin/edit-host', $data);
+        } catch (Exception $e) {
+            $_SESSION['error'] = $e->getMessage();
+            header('Location: ' . BASE_URL . '/admin/hosts');
+            exit;
+        }
+    }
+    
+    public function bulkActionHosts() {
+        try {
+            Auth::requireRole('admin');
+            
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                throw new Exception("Method not allowed");
+            }
+            
+            $hostIds = json_decode($_POST['host_ids'] ?? '[]', true);
+            $action = $_POST['action'] ?? '';
+            
+            if (empty($hostIds)) {
+                throw new Exception("No hosts selected");
+            }
+            
+            $count = 0;
+            foreach ($hostIds as $hostId) {
+                switch ($action) {
+                    case 'verify':
+                        $this->userService->updateProfile($hostId, ['is_verified' => 1]);
+                        break;
+                    case 'block':
+                        $this->userService->blockUser($hostId);
+                        break;
+                    case 'unblock':
+                        $this->userService->unblockUser($hostId);
+                        break;
+                }
+                $count++;
+            }
+            
+            $_SESSION['success'] = "Bulk action '{$action}' completed for {$count} host(s)!";
+            header('Location: ' . BASE_URL . '/admin/hosts');
+            exit;
+        } catch (Exception $e) {
+            $_SESSION['error'] = $e->getMessage();
+            header('Location: ' . BASE_URL . '/admin/hosts');
+            exit;
         }
     }
 

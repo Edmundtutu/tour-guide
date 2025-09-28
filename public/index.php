@@ -60,8 +60,10 @@ try {
     $router->addRoute('GET', '/host/create-room', 'HostController', 'createRoom');
     $router->addRoute('POST', '/host/create-room', 'HostController', 'createRoom');
     $router->addRoute('GET', '/host/bookings', 'HostController', 'bookings');
+    $router->addRoute('GET', '/host/view-booking', 'HostController', 'viewBooking');
     $router->addRoute('POST', '/host/approve-booking', 'HostController', 'approveBooking');
     $router->addRoute('POST', '/host/reject-booking', 'HostController', 'rejectBooking');
+    $router->addRoute('POST', '/host/cancel-booking', 'HostController', 'cancelBooking');
     $router->addRoute('GET', '/host/subscription', 'HostController', 'subscription');
     $router->addRoute('GET', '/host/subscribe', 'HostController', 'subscribe');
     $router->addRoute('POST', '/host/subscribe', 'HostController', 'subscribe');
@@ -70,9 +72,18 @@ try {
     $router->addRoute('POST', '/host/profile/change-password', 'HostController', 'changePassword');
     $router->addRoute('GET', '/host/calendar', 'HostController', 'calendar');
     
+    
     // Admin routes
     $router->addRoute('GET', '/admin/dashboard', 'AdminController', 'dashboard');
     $router->addRoute('GET', '/admin/users', 'AdminController', 'users');
+    $router->addRoute('GET', '/admin/get-user', 'AdminController', 'getUser');
+    $router->addRoute('GET', '/admin/view-user', 'AdminController', 'viewUser');
+    $router->addRoute('GET', '/admin/edit-user', 'AdminController', 'editUser');
+    $router->addRoute('POST', '/admin/update-user', 'AdminController', 'updateUser');
+    $router->addRoute('POST', '/admin/block-user', 'AdminController', 'blockUser');
+    $router->addRoute('POST', '/admin/unblock-user', 'AdminController', 'unblockUser');
+    $router->addRoute('POST', '/admin/delete-user', 'AdminController', 'deleteUser');
+    $router->addRoute('GET', '/admin/export-users', 'AdminController', 'exportUsers');
     $router->addRoute('GET', '/admin/hotels', 'AdminController', 'hotels');
     $router->addRoute('POST', '/admin/approve-hotel', 'AdminController', 'approveHotel');
     $router->addRoute('POST', '/admin/block-hotel', 'AdminController', 'blockHotel');
@@ -80,6 +91,10 @@ try {
     $router->addRoute('GET', '/admin/bookings', 'AdminController', 'bookings');
     $router->addRoute('GET', '/admin/reports', 'AdminController', 'reports');
     $router->addRoute('GET', '/admin/hosts', 'AdminController', 'hosts');
+    $router->addRoute('POST', '/admin/hosts/verify', 'AdminController', 'verifyHost');
+    $router->addRoute('POST', '/admin/hosts/block', 'AdminController', 'blockHost');
+    $router->addRoute('GET', '/admin/edit-host', 'AdminController', 'editHost');
+    $router->addRoute('POST', '/admin/hosts/bulk-action', 'AdminController', 'bulkActionHosts');
     
     // Dispatch the request
     $router->dispatch();

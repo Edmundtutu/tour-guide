@@ -11,6 +11,21 @@
                         <p class="mb-0">Create your account and start exploring</p>
                     </div>
                     <div class="card-body p-4">
+                        <!-- Success/Error Messages -->
+                        <?php if (isset($_SESSION['success'])): ?>
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            <i class="fas fa-check-circle me-2"></i><?= htmlspecialchars($_SESSION['success']) ?>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                        <?php unset($_SESSION['success']); endif; ?>
+                        
+                        <?php if (isset($_SESSION['error'])): ?>
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <i class="fas fa-exclamation-circle me-2"></i><?= htmlspecialchars($_SESSION['error']) ?>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                        <?php unset($_SESSION['error']); endif; ?>
+                        
                         <form action="<?= View::url('/register') ?>" method="POST" id="register-form">
                             <input type="hidden" name="csrf_token" value="<?= View::csrfToken() ?>">
                             
@@ -18,7 +33,7 @@
                             <div class="mb-4">
                                 <label class="form-label">I want to:</label>
                                 <div class="row">
-                                    <div class="col-md-4">
+                                    <div class="col-md-6">
                                         <div class="form-check">
                                             <input class="form-check-input" 
                                                    type="radio" 
@@ -27,11 +42,11 @@
                                                    value="tourist" 
                                                    checked>
                                             <label class="form-check-label" for="role_tourist">
-                                                <i class="fas fa-user me-1"></i>Explore & Book
+                                                <i class="fas fa-user me-1"></i>Explore & Book Hotels
                                             </label>
                                         </div>
                                     </div>
-                                    <div class="col-md-4">
+                                    <div class="col-md-6">
                                         <div class="form-check">
                                             <input class="form-check-input" 
                                                    type="radio" 
@@ -40,18 +55,6 @@
                                                    value="host">
                                             <label class="form-check-label" for="role_host">
                                                 <i class="fas fa-hotel me-1"></i>List My Hotel
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="form-check">
-                                            <input class="form-check-input" 
-                                                   type="radio" 
-                                                   name="role" 
-                                                   id="role_admin" 
-                                                   value="admin">
-                                            <label class="form-check-label" for="role_admin">
-                                                <i class="fas fa-crown me-1"></i>Manage System
                                             </label>
                                         </div>
                                     </div>
@@ -262,104 +265,145 @@
 </div>
 
 <script>
-$(document).ready(function() {
+// Pure vanilla JavaScript - no jQuery dependency
+document.addEventListener('DOMContentLoaded', function() {
     // Role selection handler
-    $('input[name="role"]').on('change', function() {
-        const role = $(this).val();
-        if (role === 'host') {
-            $('#host-fields').slideDown();
-            $('#hotel_name, #hotel_location, #hotel_description').prop('required', true);
-        } else {
-            $('#host-fields').slideUp();
-            $('#hotel_name, #hotel_location, #hotel_description').prop('required', false);
-        }
+    const roleInputs = document.querySelectorAll('input[name="role"]');
+    roleInputs.forEach(input => {
+        input.addEventListener('change', function() {
+            const role = this.value;
+            const hostFields = document.getElementById('host-fields');
+            const hotelFields = ['hotel_name', 'hotel_location', 'hotel_description'];
+            
+            if (role === 'host') {
+                hostFields.style.display = 'block';
+                hotelFields.forEach(fieldId => {
+                    const field = document.getElementById(fieldId);
+                    if (field) field.required = true;
+                });
+            } else {
+                hostFields.style.display = 'none';
+                hotelFields.forEach(fieldId => {
+                    const field = document.getElementById(fieldId);
+                    if (field) field.required = false;
+                });
+            }
+        });
     });
     
     // Password toggle
-    $('#toggle-password').on('click', function() {
-        const passwordField = $('#password');
-        const icon = $(this).find('i');
-        
-        if (passwordField.attr('type') === 'password') {
-            passwordField.attr('type', 'text');
-            icon.removeClass('fa-eye').addClass('fa-eye-slash');
-        } else {
-            passwordField.attr('type', 'password');
-            icon.removeClass('fa-eye-slash').addClass('fa-eye');
-        }
-    });
+    const togglePasswordBtn = document.getElementById('toggle-password');
+    if (togglePasswordBtn) {
+        togglePasswordBtn.addEventListener('click', function() {
+            const passwordField = document.getElementById('password');
+            const icon = this.querySelector('i');
+            
+            if (passwordField.type === 'password') {
+                passwordField.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                passwordField.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        });
+    }
     
     // Form validation
-    $('#register-form').on('submit', function(e) {
-        if (!validateRegisterForm()) {
-            e.preventDefault();
-        }
-    });
+    const registerForm = document.getElementById('register-form');
+    if (registerForm) {
+        registerForm.addEventListener('submit', function(e) {
+            if (!validateRegisterForm()) {
+                e.preventDefault();
+            }
+        });
+    }
     
     // Real-time password confirmation
-    $('#confirm_password').on('input', function() {
-        const password = $('#password').val();
-        const confirmPassword = $(this).val();
-        
-        if (confirmPassword && password !== confirmPassword) {
-            $(this).addClass('is-invalid');
-            if (!$(this).next('.invalid-feedback').length) {
-                $(this).after('<div class="invalid-feedback">Passwords do not match</div>');
+    const confirmPasswordField = document.getElementById('confirm_password');
+    if (confirmPasswordField) {
+        confirmPasswordField.addEventListener('input', function() {
+            const password = document.getElementById('password').value;
+            const confirmPassword = this.value;
+            
+            if (confirmPassword && password !== confirmPassword) {
+                this.classList.add('is-invalid');
+                if (!this.nextElementSibling || !this.nextElementSibling.classList.contains('invalid-feedback')) {
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'invalid-feedback';
+                    errorDiv.textContent = 'Passwords do not match';
+                    this.parentNode.insertBefore(errorDiv, this.nextSibling);
+                }
+            } else {
+                this.classList.remove('is-invalid');
+                const nextSibling = this.nextElementSibling;
+                if (nextSibling && nextSibling.classList.contains('invalid-feedback')) {
+                    nextSibling.remove();
+                }
             }
-        } else {
-            $(this).removeClass('is-invalid');
-            $(this).next('.invalid-feedback').remove();
-        }
-    });
+        });
+    }
 });
 
 function validateRegisterForm() {
     let isValid = true;
     
     // Clear previous errors
-    $('.is-invalid').removeClass('is-invalid');
-    $('.invalid-feedback').remove();
+    const invalidFields = document.querySelectorAll('.is-invalid');
+    invalidFields.forEach(field => field.classList.remove('is-invalid'));
+    
+    const invalidFeedbacks = document.querySelectorAll('.invalid-feedback');
+    invalidFeedbacks.forEach(feedback => feedback.remove());
     
     // Name validation
-    const name = $('#name').val();
+    const nameField = document.getElementById('name');
+    const name = nameField.value;
     if (!name || name.length < 2) {
-        showFieldError($('#name'), 'Name must be at least 2 characters');
+        showFieldError(nameField, 'Name must be at least 2 characters');
         isValid = false;
     }
     
     // Email validation
-    const email = $('#email').val();
+    const emailField = document.getElementById('email');
+    const email = emailField.value;
     if (!email || !isValidEmail(email)) {
-        showFieldError($('#email'), 'Please enter a valid email address');
+        showFieldError(emailField, 'Please enter a valid email address');
         isValid = false;
     }
     
     // Password validation
-    const password = $('#password').val();
+    const passwordField = document.getElementById('password');
+    const password = passwordField.value;
     if (!password || password.length < 6) {
-        showFieldError($('#password'), 'Password must be at least 6 characters');
+        showFieldError(passwordField, 'Password must be at least 6 characters');
         isValid = false;
     }
     
     // Confirm password validation
-    const confirmPassword = $('#confirm_password').val();
+    const confirmPasswordField = document.getElementById('confirm_password');
+    const confirmPassword = confirmPasswordField.value;
     if (!confirmPassword || password !== confirmPassword) {
-        showFieldError($('#confirm_password'), 'Passwords do not match');
+        showFieldError(confirmPasswordField, 'Passwords do not match');
         isValid = false;
     }
     
     // Terms validation
-    if (!$('#terms').is(':checked')) {
-        showFieldError($('#terms'), 'You must agree to the terms and conditions');
+    const termsField = document.getElementById('terms');
+    if (!termsField.checked) {
+        showFieldError(termsField, 'You must agree to the terms and conditions');
         isValid = false;
     }
     
     return isValid;
 }
 
-function showFieldError($field, message) {
-    $field.addClass('is-invalid');
-    $field.after(`<div class="invalid-feedback">${message}</div>`);
+function showFieldError(field, message) {
+    field.classList.add('is-invalid');
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'invalid-feedback';
+    errorDiv.textContent = message;
+    field.parentNode.insertBefore(errorDiv, field.nextSibling);
 }
 
 function isValidEmail(email) {

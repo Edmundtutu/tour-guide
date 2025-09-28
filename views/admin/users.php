@@ -19,7 +19,7 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Filters and Search -->
         <div class="row mb-4">
             <div class="col-12">
@@ -61,7 +61,7 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Users Table -->
         <div class="row">
             <div class="col-12">
@@ -71,13 +71,13 @@
                             <i class="fas fa-list me-2"></i>Users List
                         </h5>
                         <div class="user-stats">
-                            <span class="badge bg-primary me-2">Total: <?= count($users) ?></span>
-                            <span class="badge bg-success me-2">Active: <?= $stats['active'] ?? 0 ?></span>
-                            <span class="badge bg-warning">Blocked: <?= $stats['blocked'] ?? 0 ?></span>
+                            <span class="badge bg-primary me-2">Total: <?php echo count($users)?></span>
+                            <span class="badge bg-success me-2">Active: <?php echo $stats['active'] ?? 0?></span>
+                            <span class="badge bg-warning">Blocked: <?php echo $stats['blocked'] ?? 0?></span>
                         </div>
                     </div>
                     <div class="card-body p-0">
-                        <?php if (!empty($users)): ?>
+                        <?php if (! empty($users)): ?>
                         <div class="table-responsive">
                             <table class="table table-hover mb-0">
                                 <thead class="table-light">
@@ -92,81 +92,82 @@
                                 </thead>
                                 <tbody>
                                     <?php foreach ($users as $user): ?>
-                                    <tr class="user-row" data-status="<?= $user['status'] ?>">
+                                    <tr class="user-row" data-status="<?php echo $user['status']?>">
                                         <td>
                                             <div class="user-info">
                                                 <div class="user-avatar">
-                                                    <img src="<?= $user['avatar_url'] ?: 'https://ui-avatars.com/api/?name=' . urlencode($user['name']) . '&background=007bff&color=fff' ?>" 
-                                                         alt="<?= htmlspecialchars($user['name']) ?>" 
-                                                         class="rounded-circle" 
-                                                         width="40" 
-                                                         height="40">
+                                                <img src="<?php echo $user['avatar_url'] ?? 'https://ui-avatars.com/api/?name=' . urlencode($user['name'] ?? 'Unknown') . '&background=007bff&color=fff'?>"
+                                                    alt="<?php echo htmlspecialchars($user['name'] ?? 'User', ENT_QUOTES)?>"
+                                                    class="rounded-circle"
+                                                    width="40"
+                                                    height="40">
+
                                                 </div>
                                                 <div class="user-details">
-                                                    <strong><?= htmlspecialchars($user['name']) ?></strong>
+                                                    <strong><?php echo htmlspecialchars($user['name'])?></strong>
                                                     <br>
                                                     <small class="text-muted">
                                                         <i class="fas fa-envelope me-1"></i>
-                                                        <?= htmlspecialchars($user['email']) ?>
+                                                        <?php echo htmlspecialchars($user['email'])?>
                                                     </small>
                                                     <?php if ($user['phone']): ?>
                                                     <br>
                                                     <small class="text-muted">
                                                         <i class="fas fa-phone me-1"></i>
-                                                        <?= htmlspecialchars($user['phone']) ?>
+                                                        <?php echo htmlspecialchars($user['phone'])?>
                                                     </small>
                                                     <?php endif; ?>
                                                 </div>
                                             </div>
                                         </td>
                                         <td>
-                                            <span class="badge user-role-<?= $user['role'] ?>">
-                                                <i class="fas fa-<?= $user['role'] === 'admin' ? 'crown' : ($user['role'] === 'host' ? 'hotel' : 'user') ?> me-1"></i>
-                                                <?= ucfirst($user['role']) ?>
+                                            <span class="badge user-role-<?php echo $user['role']?>">
+                                                <i class="fas fa-<?php echo $user['role'] === 'admin' ? 'crown' : ($user['role'] === 'host' ? 'hotel' : 'user')?> me-1"></i>
+                                                <?php echo ucfirst($user['role'])?>
                                             </span>
                                         </td>
                                         <td>
-                                            <span class="badge user-status-<?= $user['status'] ?>">
-                                                <?= ucfirst($user['status']) ?>
+                                            <span class="badge user-status-<?php echo $user['status']?>">
+                                                <?php echo ucfirst($user['status'])?>
                                             </span>
                                         </td>
                                         <td>
-                                            <strong><?= date('M j, Y', strtotime($user['created_at'])) ?></strong>
+                                            <strong><?php echo date('M j, Y', strtotime($user['created_at']))?></strong>
                                             <br>
-                                            <small class="text-muted"><?= date('g:i A', strtotime($user['created_at'])) ?></small>
+                                            <small class="text-muted"><?php echo date('g:i A', strtotime($user['created_at']))?></small>
                                         </td>
                                         <td>
-                                            <strong><?= date('M j, Y', strtotime($user['last_login'] ?? $user['created_at'])) ?></strong>
+                                            <strong><?php echo date('M j, Y', strtotime($user['last_login'] ?? $user['created_at']))?></strong>
                                             <br>
-                                            <small class="text-muted"><?= date('g:i A', strtotime($user['last_login'] ?? $user['created_at'])) ?></small>
+                                            <small class="text-muted"><?php echo date('g:i A', strtotime($user['last_login'] ?? $user['created_at']))?></small>
                                         </td>
                                         <td>
                                             <div class="btn-group btn-group-sm">
-                                                <button class="btn btn-outline-primary" 
-                                                        onclick="viewUser(<?= $user['id'] ?>)"
+                                                <button class="btn btn-outline-primary"
+                                                        onclick="viewUser(<?php echo $user['id']?>)"
                                                         title="View Details">
                                                     <i class="fas fa-eye"></i>
                                                 </button>
-                                                <button class="btn btn-outline-warning" 
-                                                        onclick="editUser(<?= $user['id'] ?>)"
+                                                <button class="btn btn-outline-warning"
+                                                        onclick="editUser(<?php echo $user['id']?>)"
                                                         title="Edit User">
                                                     <i class="fas fa-edit"></i>
                                                 </button>
                                                 <?php if ($user['status'] === 'active'): ?>
-                                                <button class="btn btn-outline-danger" 
-                                                        onclick="blockUser(<?= $user['id'] ?>)"
+                                                <button class="btn btn-outline-danger"
+                                                        onclick="blockUser(<?php echo $user['id']?>)"
                                                         title="Block User">
                                                     <i class="fas fa-ban"></i>
                                                 </button>
                                                 <?php else: ?>
-                                                <button class="btn btn-outline-success" 
-                                                        onclick="unblockUser(<?= $user['id'] ?>)"
+                                                <button class="btn btn-outline-success"
+                                                        onclick="unblockUser(<?php echo $user['id']?>)"
                                                         title="Unblock User">
                                                     <i class="fas fa-check"></i>
                                                 </button>
                                                 <?php endif; ?>
-                                                <button class="btn btn-outline-danger" 
-                                                        onclick="deleteUser(<?= $user['id'] ?>)"
+                                                <button class="btn btn-outline-danger"
+                                                        onclick="deleteUser(<?php echo $user['id']?>)"
                                                         title="Delete User">
                                                     <i class="fas fa-trash"></i>
                                                 </button>
@@ -220,22 +221,22 @@
             <div class="modal-body">
                 <form id="edit-user-form">
                     <input type="hidden" id="edit_user_id" name="user_id">
-                    
+
                     <div class="mb-3">
                         <label for="edit_name" class="form-label">Full Name</label>
                         <input type="text" class="form-control" id="edit_name" name="name" required>
                     </div>
-                    
+
                     <div class="mb-3">
                         <label for="edit_email" class="form-label">Email</label>
                         <input type="email" class="form-control" id="edit_email" name="email" required>
                     </div>
-                    
+
                     <div class="mb-3">
                         <label for="edit_phone" class="form-label">Phone</label>
                         <input type="tel" class="form-control" id="edit_phone" name="phone">
                     </div>
-                    
+
                     <div class="mb-3">
                         <label for="edit_role" class="form-label">Role</label>
                         <select class="form-select" id="edit_role" name="role" required>
@@ -244,7 +245,7 @@
                             <option value="admin">Admin</option>
                         </select>
                     </div>
-                    
+
                     <div class="mb-3">
                         <label for="edit_status" class="form-label">Status</label>
                         <select class="form-select" id="edit_status" name="status" required>
@@ -264,68 +265,157 @@
 </div>
 
 <script>
-$(document).ready(function() {
-    // Initialize user management
+// Pure vanilla JavaScript - no jQuery dependency
+document.addEventListener('DOMContentLoaded', function() {
     initializeUserManagement();
 });
 
 function initializeUserManagement() {
     // Add hover effects to user rows
-    $('.user-row').hover(
-        function() {
-            $(this).addClass('table-active');
-        },
-        function() {
-            $(this).removeClass('table-active');
-        }
-    );
+    const userRows = document.querySelectorAll('.user-row');
+    userRows.forEach(row => {
+        row.addEventListener('mouseenter', function() {
+            this.classList.add('table-active');
+        });
+        row.addEventListener('mouseleave', function() {
+            this.classList.remove('table-active');
+        });
+    });
 }
 
 function filterUsers() {
-    const role = $('#role_filter').val();
-    const status = $('#status_filter').val();
-    const search = $('#search_query').val();
-    
-    $('.user-row').each(function() {
+    const role = document.getElementById('role_filter').value;
+    const status = document.getElementById('status_filter').value;
+    const search = document.getElementById('search_query').value;
+
+    const userRows = document.querySelectorAll('.user-row');
+    userRows.forEach(row => {
         let show = true;
-        
-        if (role && $(this).find('.user-role-' + role).length === 0) {
+
+        if (role && !row.querySelector('.user-role-' + role)) {
             show = false;
         }
-        
-        if (status && $(this).data('status') !== status) {
+
+        if (status && row.dataset.status !== status) {
             show = false;
         }
-        
-        if (search && !$(this).text().toLowerCase().includes(search.toLowerCase())) {
+
+        if (search && !row.textContent.toLowerCase().includes(search.toLowerCase())) {
             show = false;
         }
-        
-        if (show) {
-            $(this).show();
-        } else {
-            $(this).hide();
-        }
+
+        row.style.display = show ? '' : 'none';
     });
 }
 
 function viewUser(userId) {
-    $.ajax({
-        url: '/api/admin/get-user',
-        method: 'GET',
-        data: { user_id: userId },
-        success: function(response) {
-            if (response.success) {
-                displayUserDetails(response.user);
-                $('#userModal').modal('show');
+    // Use fetch to get user details and show in modal
+    fetch('<?= BASE_URL ?>/admin/get-user?user_id=' + userId)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayUserDetails(data.user);
+                showModal('userModal');
             } else {
-                showError(response.message || 'Failed to load user details');
+                showError(data.message || 'Failed to load user details');
             }
-        },
-        error: function() {
+        })
+        .catch(error => {
             showError('Failed to load user details. Please try again.');
-        }
-    });
+        });
+}
+
+function editUser(userId) {
+    // Use fetch to get user details and show in edit modal
+    fetch('<?= BASE_URL ?>/admin/get-user?user_id=' + userId)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                populateEditForm(data.user);
+                showModal('editUserModal');
+            } else {
+                showError(data.message || 'Failed to load user data');
+            }
+        })
+        .catch(error => {
+            showError('Failed to load user data. Please try again.');
+        });
+}
+
+function blockUser(userId) {
+    if (confirm('Are you sure you want to block this user?')) {
+        const formData = new FormData();
+        formData.append('user_id', userId);
+        
+        fetch('<?= BASE_URL ?>/admin/block-user', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showSuccess('User blocked successfully');
+                location.reload();
+            } else {
+                showError(data.message || 'Failed to block user');
+            }
+        })
+        .catch(error => {
+            showError('Failed to block user. Please try again.');
+        });
+    }
+}
+
+function unblockUser(userId) {
+    if (confirm('Are you sure you want to unblock this user?')) {
+        const formData = new FormData();
+        formData.append('user_id', userId);
+        
+        fetch('<?= BASE_URL ?>/admin/unblock-user', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showSuccess('User unblocked successfully');
+                location.reload();
+            } else {
+                showError(data.message || 'Failed to unblock user');
+            }
+        })
+        .catch(error => {
+            showError('Failed to unblock user. Please try again.');
+        });
+    }
+}
+
+function deleteUser(userId) {
+    if (confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+        const formData = new FormData();
+        formData.append('user_id', userId);
+        
+        fetch('<?= BASE_URL ?>/admin/delete-user', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showSuccess('User deleted successfully');
+                location.reload();
+            } else {
+                showError(data.message || 'Failed to delete user');
+            }
+        })
+        .catch(error => {
+            showError('Failed to delete user. Please try again.');
+        });
+    }
+}
+
+function exportUsers() {
+    window.open('<?= BASE_URL ?>/admin/export-users', '_blank');
 }
 
 function displayUserDetails(user) {
@@ -334,10 +424,10 @@ function displayUserDetails(user) {
             <div class="row">
                 <div class="col-md-4">
                     <div class="text-center">
-                        <img src="${user.avatar_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(user.name) + '&background=007bff&color=fff'}" 
-                             alt="${user.name}" 
-                             class="rounded-circle mb-3" 
-                             width="100" 
+                        <img src="${user.avatar_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(user.name) + '&background=007bff&color=fff'}"
+                             alt="${user.name}"
+                             class="rounded-circle mb-3"
+                             width="100"
                              height="100">
                         <h5>${user.name}</h5>
                         <span class="badge user-role-${user.role}">${user.role}</span>
@@ -347,7 +437,7 @@ function displayUserDetails(user) {
                     <h6>Contact Information</h6>
                     <p><strong>Email:</strong> ${user.email}</p>
                     <p><strong>Phone:</strong> ${user.phone || 'Not provided'}</p>
-                    
+
                     <h6>Account Information</h6>
                     <p><strong>Status:</strong> <span class="badge user-status-${user.status}">${user.status}</span></p>
                     <p><strong>Joined:</strong> ${user.created_at}</p>
@@ -356,125 +446,85 @@ function displayUserDetails(user) {
             </div>
         </div>
     `;
-    
-    $('#user-details').html(details);
+
+    document.getElementById('user-details').innerHTML = details;
 }
 
-function editUser(userId) {
-    $.ajax({
-        url: '/api/admin/get-user',
-        method: 'GET',
-        data: { user_id: userId },
-        success: function(response) {
-            if (response.success) {
-                const user = response.user;
-                $('#edit_user_id').val(user.id);
-                $('#edit_name').val(user.name);
-                $('#edit_email').val(user.email);
-                $('#edit_phone').val(user.phone);
-                $('#edit_role').val(user.role);
-                $('#edit_status').val(user.status);
-                
-                $('#editUserModal').modal('show');
-            } else {
-                showError(response.message || 'Failed to load user data');
-            }
-        },
-        error: function() {
-            showError('Failed to load user data. Please try again.');
-        }
-    });
+function populateEditForm(user) {
+    document.getElementById('edit_user_id').value = user.id;
+    document.getElementById('edit_name').value = user.name;
+    document.getElementById('edit_email').value = user.email;
+    document.getElementById('edit_phone').value = user.phone || '';
+    document.getElementById('edit_role').value = user.role;
+    document.getElementById('edit_status').value = user.status;
 }
 
 function saveUser() {
     const formData = new FormData(document.getElementById('edit-user-form'));
-    
-    $.ajax({
-        url: '/api/admin/update-user',
+
+    fetch('<?= BASE_URL ?>/admin/update-user', {
         method: 'POST',
-        data: formData,
-        processData: false,
-        contentType: false,
-        success: function(response) {
-            if (response.success) {
-                showSuccess('User updated successfully');
-                $('#editUserModal').modal('hide');
-                location.reload();
-            } else {
-                showError(response.message || 'Failed to update user');
-            }
-        },
-        error: function() {
-            showError('Failed to update user. Please try again.');
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showSuccess('User updated successfully');
+            hideModal('editUserModal');
+            location.reload();
+        } else {
+            showError(data.message || 'Failed to update user');
         }
+    })
+    .catch(error => {
+        showError('Failed to update user. Please try again.');
     });
 }
 
-function blockUser(userId) {
-    if (confirm('Are you sure you want to block this user?')) {
-        $.ajax({
-            url: '/api/admin/block-user',
-            method: 'POST',
-            data: { user_id: userId },
-            success: function(response) {
-                if (response.success) {
-                    showSuccess('User blocked successfully');
-                    location.reload();
-                } else {
-                    showError(response.message || 'Failed to block user');
-                }
-            },
-            error: function() {
-                showError('Failed to block user. Please try again.');
-            }
-        });
+function showModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        const bsModal = new bootstrap.Modal(modal);
+        bsModal.show();
     }
 }
 
-function unblockUser(userId) {
-    if (confirm('Are you sure you want to unblock this user?')) {
-        $.ajax({
-            url: '/api/admin/unblock-user',
-            method: 'POST',
-            data: { user_id: userId },
-            success: function(response) {
-                if (response.success) {
-                    showSuccess('User unblocked successfully');
-                    location.reload();
-                } else {
-                    showError(response.message || 'Failed to unblock user');
-                }
-            },
-            error: function() {
-                showError('Failed to unblock user. Please try again.');
-            }
-        });
+function hideModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        const bsModal = bootstrap.Modal.getInstance(modal);
+        if (bsModal) {
+            bsModal.hide();
+        }
     }
 }
 
-function deleteUser(userId) {
-    if (confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
-        $.ajax({
-            url: '/api/admin/delete-user',
-            method: 'POST',
-            data: { user_id: userId },
-            success: function(response) {
-                if (response.success) {
-                    showSuccess('User deleted successfully');
-                    location.reload();
-                } else {
-                    showError(response.message || 'Failed to delete user');
-                }
-            },
-            error: function() {
-                showError('Failed to delete user. Please try again.');
-            }
-        });
-    }
+function showSuccess(message) {
+    showAlert(message, 'success');
 }
 
-function exportUsers() {
-    window.open('/api/admin/export-users', '_blank');
+function showError(message) {
+    showAlert(message, 'danger');
+}
+
+function showAlert(message, type) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    alertDiv.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    const container = document.querySelector('.container');
+    container.insertBefore(alertDiv, container.firstChild);
+    
+    // Auto-hide after 5 seconds
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.remove();
+        }
+    }, 5000);
 }
 </script>
 
@@ -559,16 +609,16 @@ function exportUsers() {
     .user-actions {
         margin-top: 1rem;
     }
-    
+
     .table-responsive {
         font-size: 0.9rem;
     }
-    
+
     .user-info {
         flex-direction: column;
         align-items: flex-start;
     }
-    
+
     .user-avatar {
         margin-right: 0;
         margin-bottom: 0.5rem;

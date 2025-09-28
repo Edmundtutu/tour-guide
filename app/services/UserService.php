@@ -10,6 +10,11 @@ class UserService {
     }
     
     public function register($data) {
+        // Validate role - only tourist and host allowed
+        if (!in_array($data['role'], ['tourist', 'host'])) {
+            throw new Exception("Invalid user role. Only tourists and hosts can register.");
+        }
+        
         // Validate input
         if (strlen($data['password']) < PASSWORD_MIN_LENGTH) {
             throw new Exception("Password must be at least " . PASSWORD_MIN_LENGTH . " characters long");
@@ -17,6 +22,12 @@ class UserService {
         
         if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
             throw new Exception("Invalid email format");
+        }
+        
+        // Check if email already exists
+        $existingUser = $this->userModel->findByEmail($data['email']);
+        if ($existingUser) {
+            throw new Exception("Email address is already registered");
         }
         
         try {
@@ -132,5 +143,15 @@ class UserService {
     public function deactivateUser($userId) {
         Auth::requireRole('admin');
         return $this->userModel->updateStatus($userId, 'inactive');
+    }
+    
+    public function getUserById($userId) {
+        Auth::requireRole('admin');
+        return $this->userModel->findById($userId);
+    }
+    
+    public function deleteUser($userId) {
+        Auth::requireRole('admin');
+        return $this->userModel->delete($userId);
     }
 }

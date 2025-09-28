@@ -20,50 +20,49 @@
             </div>
         </div>
         
+        <!-- Success/Error Messages -->
+        <?php if (isset($_SESSION['success'])): ?>
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle me-2"></i><?= htmlspecialchars($_SESSION['success']) ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        <?php unset($_SESSION['success']); endif; ?>
+        
+        <?php if (isset($_SESSION['error'])): ?>
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-circle me-2"></i><?= htmlspecialchars($_SESSION['error']) ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        <?php unset($_SESSION['error']); endif; ?>
+        
         <!-- Statistics Cards -->
-        <div class="row mb-5">
-            <div class="col-md-3 mb-3">
-                <div class="card dashboard-card">
-                    <div class="card-body text-center">
-                        <div class="dashboard-stat">
-                            <div class="stat-number"><?= $stats['total_hotels'] ?? 0 ?></div>
-                            <div class="stat-label">Total Hotels</div>
-                        </div>
-                        <i class="fas fa-hotel fa-2x text-primary mt-3"></i>
-                    </div>
+        <div class="minimalist-grid">
+            <div class="stat-item">
+                <div class="stat-number"><?= $stats['total_hotels'] ?? 0 ?></div>
+                <div class="stat-label">Total Hotels</div>
+                <div class="stat-change positive">
+                    ▲+2
                 </div>
             </div>
-            <div class="col-md-3 mb-3">
-                <div class="card dashboard-card">
-                    <div class="card-body text-center">
-                        <div class="dashboard-stat">
-                            <div class="stat-number"><?= $stats['total_bookings'] ?? 0 ?></div>
-                            <div class="stat-label">Total Bookings</div>
-                        </div>
-                        <i class="fas fa-calendar-check fa-2x text-success mt-3"></i>
-                    </div>
+            <div class="stat-item">
+                <div class="stat-number"><?= $stats['total_bookings'] ?? 0 ?></div>
+                <div class="stat-label">Total Bookings</div>
+                <div class="stat-change positive">
+                    ▲+18%
                 </div>
             </div>
-            <div class="col-md-3 mb-3">
-                <div class="card dashboard-card">
-                    <div class="card-body text-center">
-                        <div class="dashboard-stat">
-                            <div class="stat-number"><?= $stats['pending_bookings'] ?? 0 ?></div>
-                            <div class="stat-label">Pending Bookings</div>
-                        </div>
-                        <i class="fas fa-clock fa-2x text-warning mt-3"></i>
-                    </div>
+            <div class="stat-item">
+                <div class="stat-number"><?= $stats['pending_bookings'] ?? 0 ?></div>
+                <div class="stat-label">Pending Bookings</div>
+                <div class="stat-change neutral">
+                    <i class="fas fa-minus me-1"></i>0%
                 </div>
             </div>
-            <div class="col-md-3 mb-3">
-                <div class="card dashboard-card">
-                    <div class="card-body text-center">
-                        <div class="dashboard-stat">
-                            <div class="stat-number">UGX <?= number_format($stats['total_revenue'] ?? 0) ?></div>
-                            <div class="stat-label">Total Revenue</div>
-                        </div>
-                        <i class="fas fa-money-bill-wave fa-2x text-info mt-3"></i>
-                    </div>
+            <div class="stat-item">
+                <div class="stat-number">UGX <?= number_format($stats['total_revenue'] ?? 0) ?></div>
+                <div class="stat-label">Total Revenue</div>
+                <div class="stat-change positive">
+                    ▲+25%
                 </div>
             </div>
         </div>
@@ -244,103 +243,175 @@
 </section>
 
 <script>
-$(document).ready(function() {
+// Pure vanilla JavaScript - no jQuery dependency
+document.addEventListener('DOMContentLoaded', function() {
     // Initialize dashboard widgets
     initializeDashboard();
 });
 
 function initializeDashboard() {
-    // Auto-refresh bookings every 30 seconds
-    setInterval(function() {
-        refreshBookings();
-    }, 30000);
+    // Dashboard initialization - no auto-refresh needed with form submissions
 }
 
-function refreshBookings() {
-    // AJAX call to refresh bookings data
-    $.ajax({
-        url: '/api/host/recent-bookings',
-        method: 'GET',
-        success: function(response) {
-            if (response.success) {
-                updateBookingsTable(response.bookings);
-            }
-        }
-    });
-}
-
-function updateBookingsTable(bookings) {
-    // Update the bookings table with new data
-    // This would be implemented based on the response structure
+function viewBooking(bookingId) {
+    // Navigate to view booking page
+    window.location.href = `<?= BASE_URL ?>/host/view-booking?booking_id=${bookingId}`;
 }
 
 function approveBooking(bookingId) {
     if (confirm('Are you sure you want to approve this booking?')) {
-        $.ajax({
-            url: '/api/host/approve-booking',
-            method: 'POST',
-            data: { booking_id: bookingId },
-            success: function(response) {
-                if (response.success) {
-                    showSuccess('Booking approved successfully');
-                    location.reload();
-                } else {
-                    showError(response.message || 'Failed to approve booking');
-                }
-            },
-            error: function() {
-                showError('Failed to approve booking. Please try again.');
-            }
-        });
+        // Create and submit a form
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '<?= BASE_URL ?>/host/approve-booking';
+        
+        const bookingIdInput = document.createElement('input');
+        bookingIdInput.type = 'hidden';
+        bookingIdInput.name = 'booking_id';
+        bookingIdInput.value = bookingId;
+        
+        form.appendChild(bookingIdInput);
+        document.body.appendChild(form);
+        form.submit();
     }
 }
 
 function rejectBooking(bookingId) {
     if (confirm('Are you sure you want to reject this booking?')) {
-        $.ajax({
-            url: '/api/host/reject-booking',
-            method: 'POST',
-            data: { booking_id: bookingId },
-            success: function(response) {
-                if (response.success) {
-                    showSuccess('Booking rejected');
-                    location.reload();
-                } else {
-                    showError(response.message || 'Failed to reject booking');
-                }
-            },
-            error: function() {
-                showError('Failed to reject booking. Please try again.');
-            }
-        });
+        // Create and submit a form
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '<?= BASE_URL ?>/host/reject-booking';
+        
+        const bookingIdInput = document.createElement('input');
+        bookingIdInput.type = 'hidden';
+        bookingIdInput.name = 'booking_id';
+        bookingIdInput.value = bookingId;
+        
+        form.appendChild(bookingIdInput);
+        document.body.appendChild(form);
+        form.submit();
     }
+}
+
+function showSuccess(message) {
+    // Remove existing alerts
+    const existingAlerts = document.querySelectorAll('.alert');
+    existingAlerts.forEach(alert => alert.remove());
+    
+    // Add new success alert
+    const alert = document.createElement('div');
+    alert.className = 'alert alert-success alert-dismissible fade show';
+    alert.role = 'alert';
+    alert.innerHTML = `
+        <i class="fas fa-check-circle me-2"></i>${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    const container = document.querySelector('.container');
+    if (container) {
+        container.insertBefore(alert, container.firstChild);
+    }
+    
+    // Auto-hide after 5 seconds
+    setTimeout(() => {
+        if (alert.parentNode) {
+            alert.remove();
+        }
+    }, 5000);
+}
+
+function showError(message) {
+    // Remove existing alerts
+    const existingAlerts = document.querySelectorAll('.alert');
+    existingAlerts.forEach(alert => alert.remove());
+    
+    // Add new error alert
+    const alert = document.createElement('div');
+    alert.className = 'alert alert-danger alert-dismissible fade show';
+    alert.role = 'alert';
+    alert.innerHTML = `
+        <i class="fas fa-exclamation-circle me-2"></i>${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    const container = document.querySelector('.container');
+    if (container) {
+        container.insertBefore(alert, container.firstChild);
+    }
+    
+    // Auto-hide after 5 seconds
+    setTimeout(() => {
+        if (alert.parentNode) {
+            alert.remove();
+        }
+    }, 5000);
 }
 </script>
 
 <style>
-.dashboard-card {
+/* Minimalist Grid Layout */
+.minimalist-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 2rem;
+    margin-bottom: 4rem;
+}
+
+.stat-item {
+    padding: 2rem 1.5rem;
+    text-align: center;
+    border: none;
+    background: transparent;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.stat-item::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 20%;
+    width: 60%;
+    height: 1px;
+    background: #e2e8f0;
     transition: all 0.3s ease;
 }
 
-.dashboard-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+.stat-item:hover::after {
+    width: 80%;
+    left: 10%;
+    background: #3b82f6;
+    height: 2px;
 }
 
-.dashboard-stat .stat-number {
+.stat-item:hover {
+    background: rgba(59, 130, 246, 0.02);
+}
+
+.stat-number {
     font-size: 2.5rem;
     font-weight: 700;
-    color: var(--primary-color);
+    color: #1e293b;
+    margin-bottom: 0.25rem;
+}
+
+.stat-label {
+    font-size: 0.9rem;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
     margin-bottom: 0.5rem;
 }
 
-.dashboard-stat .stat-label {
-    color: #6c757d;
-    font-weight: 500;
-    text-transform: uppercase;
+.stat-change {
     font-size: 0.85rem;
-    letter-spacing: 0.5px;
+    font-weight: 500;
 }
+
+.positive { color: #10b981; }
+.negative { color: #ef4444; }
+.neutral { color: #6b7280; }
 
 .booking-status-pending {
     background-color: var(--warning-color);
@@ -388,7 +459,7 @@ function rejectBooking(bookingId) {
 }
 
 @media (max-width: 768px) {
-    .dashboard-stat .stat-number {
+    .stat-number {
         font-size: 2rem;
     }
     

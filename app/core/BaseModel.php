@@ -46,14 +46,22 @@ abstract class BaseModel {
     
     // Generic create
     public function create($data) {
-        $fields = array_keys($data);
+        // Filter out null values and empty strings for optional fields
+        $filteredData = [];
+        foreach ($data as $key => $value) {
+            if ($value !== null && $value !== '') {
+                $filteredData[$key] = $value;
+            }
+        }
+        
+        $fields = array_keys($filteredData);
         $placeholders = ':' . implode(', :', $fields);
         
         $sql = "INSERT INTO {$this->table} (" . implode(', ', $fields) . ") VALUES ({$placeholders})";
         
         $stmt = $this->db->prepare($sql);
         
-        foreach ($data as $key => $value) {
+        foreach ($filteredData as $key => $value) {
             $stmt->bindValue(":{$key}", $value);
         }
         

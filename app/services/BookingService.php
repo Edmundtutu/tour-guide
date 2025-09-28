@@ -46,6 +46,11 @@ class BookingService {
             $data['guests'] = 1;
         }
         
+        // Convert empty room_id to null
+        if (empty($data['room_id'])) {
+            $data['room_id'] = null;
+        }
+        
         return $this->bookingModel->createBooking($data);
     }
     
@@ -71,14 +76,14 @@ class BookingService {
         $currentUser = Auth::getCurrentUser();
         
         if ($currentUser['role'] === 'tourist') {
-            return $this->bookingModel->findByTourist($currentUser['id']);
+            return $this->bookingModel->findByTouristWithHotel($currentUser['id']);
         } elseif ($currentUser['role'] === 'host') {
-            // Get bookings for all host's hotels
+            // Get bookings for all host's hotels with details
             $hotels = $this->hotelModel->findByHost($currentUser['id']);
             $bookings = [];
             
             foreach ($hotels as $hotel) {
-                $hotelBookings = $this->bookingModel->findByHotel($hotel['id']);
+                $hotelBookings = $this->bookingModel->findByHotelWithDetails($hotel['id']);
                 $bookings = array_merge($bookings, $hotelBookings);
             }
             
@@ -105,6 +110,31 @@ class BookingService {
             if ($hotel['host_id'] != $currentUser['id']) {
                 throw new Exception("Access denied");
             }
+        }
+        
+        return $booking;
+    }
+    
+    public function getBookingDetails($bookingId) {
+        Auth::requireLogin();
+        
+        $booking = $this->bookingModel->getBookingDetails($bookingId);
+        if (!$booking) {
+            throw new Exception("Booking not found");
+        }
+        
+        // Check access permissions
+        $currentUser = Auth::getCurrentUser();
+        
+        if ($currentUser['role'] === 'tourist' && $booking['tourist_id'] != $currentUser['id']) {
+            throw new Exception("Access denied");
+        } elseif ($currentUser['role'] === 'host') {
+            $hotel = $this->hotelModel->findById($booking['hotel_id']);
+            if (!$hotel || $hotel['host_id'] != $currentUser['id']) {
+                throw new Exception("Access denied");
+            }
+        } elseif ($currentUser['role'] !== 'admin') {
+            throw new Exception("Access denied");
         }
         
         return $booking;
@@ -232,4 +262,5 @@ class BookingService {
             return $this->bookingModel->findByStatus('pending');
         }
     }
+    
 }

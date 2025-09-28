@@ -2,16 +2,19 @@
 require_once __DIR__ . '/../services/HotelService.php';
 require_once __DIR__ . '/../services/BookingService.php';
 require_once __DIR__ . '/../services/SubscriptionService.php';
+require_once __DIR__ . '/../services/UserService.php';
 
 class HostController {
     private $hotelService;
     private $bookingService;
     private $subscriptionService;
+    private $userService;
     
     public function __construct() {
         $this->hotelService = new HotelService();
         $this->bookingService = new BookingService();
         $this->subscriptionService = new SubscriptionService();
+        $this->userService = new UserService();
     }
     
     public function dashboard() {
@@ -65,6 +68,13 @@ class HostController {
     public function createHotel() {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             try {
+                Auth::requireRole('host');
+                
+                // CSRF validation
+                if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== View::csrfToken()) {
+                    throw new Exception("Invalid CSRF token");
+                }
+                
                 $data = [
                     'name' => $_POST['name'] ?? '',
                     'description' => $_POST['description'] ?? '',
@@ -75,25 +85,45 @@ class HostController {
                 
                 $hotelId = $this->hotelService->createHotel($data);
                 
+                $_SESSION['success'] = 'Hotel created successfully!';
                 header('Location: ' . BASE_URL . '/host/hotels');
                 exit;
             } catch (Exception $e) {
-                $this->renderCreateHotelForm(['error' => $e->getMessage()]);
+                $_SESSION['error'] = $e->getMessage();
+                $_SESSION['old_input'] = $_POST;
+                header('Location: ' . BASE_URL . '/host/create-hotel');
+                exit;
             }
         } else {
-            $this->renderCreateHotelForm();
+            try {
+                Auth::requireRole('host');
+                
+                $data = [
+                    'title' => 'Create Hotel'
+                ];
+                
+                echo View::renderWithLayout('host/create-hotel', $data);
+            } catch (Exception $e) {
+                $this->renderError($e->getMessage());
+            }
         }
     }
     
     public function editHotel() {
-        $hotelId = $_GET['id'] ?? null;
-        if (!$hotelId) {
-            $this->renderError("Hotel ID required");
-            return;
-        }
-        
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            try {
+        try {
+            Auth::requireRole('host');
+            
+            $hotelId = $_GET['id'] ?? null;
+            if (!$hotelId) {
+                throw new Exception("Hotel ID required");
+            }
+            
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                // CSRF validation
+                if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== View::csrfToken()) {
+                    throw new Exception("Invalid CSRF token");
+                }
+                
                 $data = [
                     'name' => $_POST['name'] ?? '',
                     'description' => $_POST['description'] ?? '',
@@ -104,19 +134,23 @@ class HostController {
                 
                 $this->hotelService->updateHotel($hotelId, $data);
                 
+                $_SESSION['success'] = 'Hotel updated successfully!';
                 header('Location: ' . BASE_URL . '/host/hotels');
                 exit;
-            } catch (Exception $e) {
+            } else {
                 $hotel = $this->hotelService->getHotelById($hotelId);
-                $this->renderEditHotelForm(['hotel' => $hotel, 'error' => $e->getMessage()]);
+                
+                $data = [
+                    'title' => 'Edit Hotel',
+                    'hotel' => $hotel
+                ];
+                
+                echo View::renderWithLayout('host/edit-hotel', $data);
             }
-        } else {
-            try {
-                $hotel = $this->hotelService->getHotelById($hotelId);
-                $this->renderEditHotelForm(['hotel' => $hotel]);
-            } catch (Exception $e) {
-                $this->renderError($e->getMessage());
-            }
+        } catch (Exception $e) {
+            $_SESSION['error'] = $e->getMessage();
+            header('Location: ' . BASE_URL . '/host/hotels');
+            exit;
         }
     }
     
@@ -126,50 +160,70 @@ class HostController {
             $hotelId = $_GET['hotel_id'] ?? null;
             
             if (!$hotelId) {
-                $this->renderError("Hotel ID required");
-                return;
+                throw new Exception("Hotel ID required");
             }
             
             $hotel = $this->hotelService->getHotelById($hotelId);
             $rooms = $this->hotelService->getHotelRooms($hotelId);
             
-            $this->renderRooms(['hotel' => $hotel, 'rooms' => $rooms]);
+            $data = [
+                'title' => 'Hotel Rooms',
+                'hotel' => $hotel,
+                'rooms' => $rooms
+            ];
+            
+            echo View::renderWithLayout('host/rooms', $data);
         } catch (Exception $e) {
-            $this->renderError($e->getMessage());
+            $_SESSION['error'] = $e->getMessage();
+            header('Location: ' . BASE_URL . '/host/hotels');
+            exit;
         }
     }
     
     public function createRoom() {
-        $hotelId = $_GET['hotel_id'] ?? null;
-        if (!$hotelId) {
-            $this->renderError("Hotel ID required");
-            return;
-        }
-        
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            try {
+        try {
+            Auth::requireRole('host');
+            
+            $hotelId = $_GET['hotel_id'] ?? null;
+            if (!$hotelId) {
+                throw new Exception("Hotel ID required");
+            }
+            
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                // CSRF validation
+                if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== View::csrfToken()) {
+                    throw new Exception("Invalid CSRF token");
+                }
+                
                 $data = [
                     'hotel_id' => $hotelId,
                     'room_type' => $_POST['room_type'] ?? '',
                     'price' => $_POST['price'] ?? 0,
-                    'capacity' => $_POST['capacity'] ?? 1
+                    'capacity' => $_POST['capacity'] ?? 1,
+                    'availability_status' => $_POST['availability_status'] ?? 'available',
+                    'description' => $_POST['description'] ?? ''
                 ];
                 
                 $roomId = $this->hotelService->createRoom($data);
                 
+                $_SESSION['success'] = 'Room added successfully!';
                 header('Location: ' . BASE_URL . '/host/rooms?hotel_id=' . $hotelId);
                 exit;
-            } catch (Exception $e) {
+            } else {
                 $hotel = $this->hotelService->getHotelById($hotelId);
-                $this->renderCreateRoomForm(['hotel' => $hotel, 'error' => $e->getMessage()]);
+                
+                $data = [
+                    'title' => 'Add Room',
+                    'hotel' => $hotel
+                ];
+                
+                echo View::renderWithLayout('host/create-room', $data);
             }
-        } else {
-            try {
-                $hotel = $this->hotelService->getHotelById($hotelId);
-                $this->renderCreateRoomForm(['hotel' => $hotel]);
-            } catch (Exception $e) {
-                $this->renderError($e->getMessage());
-            }
+        } catch (Exception $e) {
+            $_SESSION['error'] = $e->getMessage();
+            $_SESSION['old_input'] = $_POST;
+            header('Location: ' . BASE_URL . '/host/create-room?hotel_id=' . ($hotelId ?? ''));
+            exit;
         }
     }
     
@@ -202,6 +256,8 @@ class HostController {
     
     public function approveBooking() {
         try {
+            Auth::requireRole('host');
+            
             $bookingId = $_POST['booking_id'] ?? null;
             if (!$bookingId) {
                 throw new Exception("Booking ID required");
@@ -209,15 +265,20 @@ class HostController {
             
             $this->bookingService->approveBooking($bookingId);
             
+            $_SESSION['success'] = 'Booking approved successfully!';
             header('Location: ' . BASE_URL . '/host/bookings');
             exit;
         } catch (Exception $e) {
-            $this->renderError($e->getMessage());
+            $_SESSION['error'] = $e->getMessage();
+            header('Location: ' . BASE_URL . '/host/bookings');
+            exit;
         }
     }
     
     public function rejectBooking() {
         try {
+            Auth::requireRole('host');
+            
             $bookingId = $_POST['booking_id'] ?? null;
             if (!$bookingId) {
                 throw new Exception("Booking ID required");
@@ -225,12 +286,72 @@ class HostController {
             
             $this->bookingService->rejectBooking($bookingId);
             
+            $_SESSION['success'] = 'Booking rejected successfully!';
             header('Location: ' . BASE_URL . '/host/bookings');
             exit;
         } catch (Exception $e) {
-            $this->renderError($e->getMessage());
+            $_SESSION['error'] = $e->getMessage();
+            header('Location: ' . BASE_URL . '/host/bookings');
+            exit;
         }
     }
+    
+    public function cancelBooking() {
+        try {
+            Auth::requireRole('host');
+            
+            $bookingId = $_POST['booking_id'] ?? null;
+            if (!$bookingId) {
+                throw new Exception("Booking ID required");
+            }
+            
+            $this->bookingService->cancelBooking($bookingId);
+            
+            $_SESSION['success'] = 'Booking cancelled successfully!';
+            header('Location: ' . BASE_URL . '/host/bookings');
+            exit;
+        } catch (Exception $e) {
+            $_SESSION['error'] = $e->getMessage();
+            header('Location: ' . BASE_URL . '/host/bookings');
+            exit;
+        }
+    }
+    
+    public function viewBooking() {
+        try {
+            Auth::requireRole('host');
+            
+            $bookingId = $_GET['booking_id'] ?? null;
+            if (!$bookingId) {
+                throw new Exception("Booking ID required");
+            }
+            
+            $booking = $this->bookingService->getBookingDetails($bookingId);
+            if (!$booking) {
+                throw new Exception("Booking not found");
+            }
+            
+            // Check if the booking belongs to this host
+            $currentUser = Auth::getCurrentUser();
+            $hotel = $this->hotelService->getHotelById($booking['hotel_id']);
+            if (!$hotel || $hotel['host_id'] != $currentUser['id']) {
+                throw new Exception("Access denied");
+            }
+            
+            $data = [
+                'title' => 'Booking Details',
+                'booking' => $booking,
+                'hotel' => $hotel
+            ];
+            
+            echo View::renderWithLayout('host/view-booking', $data);
+        } catch (Exception $e) {
+            $_SESSION['error'] = $e->getMessage();
+            header('Location: ' . BASE_URL . '/host/bookings');
+            exit;
+        }
+    }
+    
     
     public function subscription() {
         try {
@@ -238,297 +359,54 @@ class HostController {
             $subscription = $this->subscriptionService->getMySubscription();
             $history = $this->subscriptionService->getMySubscriptionHistory();
             
-            $this->renderSubscription(['subscription' => $subscription, 'history' => $history]);
+            $data = [
+                'title' => 'Subscription Management',
+                'subscription' => $subscription,
+                'history' => $history
+            ];
+            
+            echo View::renderWithLayout('host/subscription', $data);
         } catch (Exception $e) {
-            $this->renderError($e->getMessage());
+            $_SESSION['error'] = $e->getMessage();
+            header('Location: ' . BASE_URL . '/host/dashboard');
+            exit;
         }
     }
     
     public function subscribe() {
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            try {
+        try {
+            Auth::requireRole('host');
+            
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                // CSRF validation
+                if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== View::csrfToken()) {
+                    throw new Exception("Invalid CSRF token");
+                }
+                
                 $currentUser = Auth::getCurrentUser();
                 $plan = $_POST['plan'] ?? '';
                 
                 $subscriptionId = $this->subscriptionService->createSubscription($currentUser['id'], $plan);
                 
+                $_SESSION['success'] = 'Subscription activated successfully!';
                 header('Location: ' . BASE_URL . '/host/subscription');
                 exit;
-            } catch (Exception $e) {
-                $this->renderSubscribeForm(['error' => $e->getMessage()]);
-            }
-        } else {
-            $this->renderSubscribeForm();
-        }
-    }
-    
-    // Rendering methods
-    private function renderDashboard($data) {
-        echo "<h1>Host Dashboard</h1>";
-        
-        echo "<div>";
-        echo "<h2>Subscription Status</h2>";
-        if ($data['subscription']) {
-            $sub = $data['subscription'];
-            echo "<p>Plan: {$sub['plan']}</p>";
-            echo "<p>Status: {$sub['status']}</p>";
-            echo "<p>Expires: {$sub['end_date']}</p>";
-        } else {
-            echo "<p style='color: red;'>No active subscription</p>";
-            echo "<a href='" . BASE_URL . "/host/subscribe'>Subscribe Now</a>";
-        }
-        echo "</div>";
-        
-        echo "<div>";
-        echo "<h2>My Hotels (" . count($data['hotels']) . ")</h2>";
-        foreach ($data['hotels'] as $hotel) {
-            echo "<div>";
-            echo "<h3>{$hotel['name']}</h3>";
-            echo "<p>Status: {$hotel['status']}</p>";
-            echo "<a href='" . BASE_URL . "/host/rooms?hotel_id={$hotel['id']}'>Manage Rooms</a>";
-            echo "</div>";
-        }
-        echo "<a href='" . BASE_URL . "/host/create-hotel'>Add New Hotel</a>";
-        echo "</div>";
-        
-        echo "<div>";
-        echo "<h2>Pending Bookings (" . count($data['pendingBookings']) . ")</h2>";
-        foreach ($data['pendingBookings'] as $booking) {
-            echo "<div>";
-            echo "<p>Booking #{$booking['id']}</p>";
-            echo "<p>Dates: {$booking['check_in']} to {$booking['check_out']}</p>";
-            echo "<p>Total: UGX {$booking['total_price']}</p>";
-            echo "</div>";
-        }
-        echo "<a href='" . BASE_URL . "/host/bookings'>View All Bookings</a>";
-        echo "</div>";
-    }
-    
-    private function renderHotels($data) {
-        echo "<h1>My Hotels</h1>";
-        echo "<a href='" . BASE_URL . "/host/create-hotel'>Add New Hotel</a>";
-        
-        foreach ($data['hotels'] as $hotel) {
-            echo "<div>";
-            echo "<h3>{$hotel['name']}</h3>";
-            echo "<p>{$hotel['location']}</p>";
-            echo "<p>Price: UGX {$hotel['price_per_night']}/night</p>";
-            echo "<p>Status: {$hotel['status']}</p>";
-            echo "<a href='" . BASE_URL . "/host/edit-hotel?id={$hotel['id']}'>Edit</a>";
-            echo "<a href='" . BASE_URL . "/host/rooms?hotel_id={$hotel['id']}'>Manage Rooms</a>";
-            echo "</div>";
-        }
-    }
-    
-    private function renderCreateHotelForm($data = []) {
-        echo "<h1>Create Hotel</h1>";
-        if (isset($data['error'])) {
-            echo "<p style='color: red;'>{$data['error']}</p>";
-        }
-        
-        echo "<form method='POST'>";
-        echo "<div>";
-        echo "<label>Name:</label>";
-        echo "<input type='text' name='name' required>";
-        echo "</div>";
-        
-        echo "<div>";
-        echo "<label>Description:</label>";
-        echo "<textarea name='description'></textarea>";
-        echo "</div>";
-        
-        echo "<div>";
-        echo "<label>Location:</label>";
-        echo "<input type='text' name='location' required>";
-        echo "</div>";
-        
-        echo "<div>";
-        echo "<label>Price per Night (UGX):</label>";
-        echo "<input type='number' name='price_per_night' min='0' step='1000' required>";
-        echo "</div>";
-        
-        echo "<div>";
-        echo "<label>Image URL:</label>";
-        echo "<input type='url' name='image_url'>";
-        echo "</div>";
-        
-        echo "<button type='submit'>Create Hotel</button>";
-        echo "</form>";
-        
-        echo "<a href='" . BASE_URL . "/host/hotels'>Back to Hotels</a>";
-    }
-    
-    private function renderEditHotelForm($data) {
-        $hotel = $data['hotel'];
-        echo "<h1>Edit Hotel</h1>";
-        if (isset($data['error'])) {
-            echo "<p style='color: red;'>{$data['error']}</p>";
-        }
-        
-        echo "<form method='POST'>";
-        echo "<div>";
-        echo "<label>Name:</label>";
-        echo "<input type='text' name='name' value='{$hotel['name']}' required>";
-        echo "</div>";
-        
-        echo "<div>";
-        echo "<label>Description:</label>";
-        echo "<textarea name='description'>{$hotel['description']}</textarea>";
-        echo "</div>";
-        
-        echo "<div>";
-        echo "<label>Location:</label>";
-        echo "<input type='text' name='location' value='{$hotel['location']}' required>";
-        echo "</div>";
-        
-        echo "<div>";
-        echo "<label>Price per Night (UGX):</label>";
-        echo "<input type='number' name='price_per_night' value='{$hotel['price_per_night']}' min='0' step='1000' required>";
-        echo "</div>";
-        
-        echo "<div>";
-        echo "<label>Image URL:</label>";
-        echo "<input type='url' name='image_url' value='{$hotel['image_url']}'>";
-        echo "</div>";
-        
-        echo "<button type='submit'>Update Hotel</button>";
-        echo "</form>";
-        
-        echo "<a href='" . BASE_URL . "/host/hotels'>Back to Hotels</a>";
-    }
-    
-    private function renderRooms($data) {
-        $hotel = $data['hotel'];
-        echo "<h1>Rooms for {$hotel['name']}</h1>";
-        echo "<a href='" . BASE_URL . "/host/create-room?hotel_id={$hotel['id']}'>Add New Room</a>";
-        
-        foreach ($data['rooms'] as $room) {
-            echo "<div>";
-            echo "<h3>{$room['room_type']}</h3>";
-            echo "<p>Price: UGX {$room['price']}/night</p>";
-            echo "<p>Capacity: {$room['capacity']} guests</p>";
-            echo "<p>Status: {$room['availability_status']}</p>";
-            echo "</div>";
-        }
-        
-        echo "<a href='" . BASE_URL . "/host/hotels'>Back to Hotels</a>";
-    }
-    
-    private function renderCreateRoomForm($data) {
-        $hotel = $data['hotel'];
-        echo "<h1>Add Room to {$hotel['name']}</h1>";
-        if (isset($data['error'])) {
-            echo "<p style='color: red;'>{$data['error']}</p>";
-        }
-        
-        echo "<form method='POST'>";
-        echo "<div>";
-        echo "<label>Room Type:</label>";
-        echo "<input type='text' name='room_type' placeholder='e.g., Single, Double, Deluxe' required>";
-        echo "</div>";
-        
-        echo "<div>";
-        echo "<label>Price per Night (UGX):</label>";
-        echo "<input type='number' name='price' min='0' step='1000' required>";
-        echo "</div>";
-        
-        echo "<div>";
-        echo "<label>Capacity:</label>";
-        echo "<input type='number' name='capacity' min='1' value='1' required>";
-        echo "</div>";
-        
-        echo "<button type='submit'>Add Room</button>";
-        echo "</form>";
-        
-        echo "<a href='" . BASE_URL . "/host/rooms?hotel_id={$hotel['id']}'>Back to Rooms</a>";
-    }
-    
-    private function renderBookings($data) {
-        echo "<h1>My Bookings</h1>";
-        
-        if (empty($data['bookings'])) {
-            echo "<p>No bookings found.</p>";
-            return;
-        }
-        
-        foreach ($data['bookings'] as $booking) {
-            echo "<div>";
-            echo "<h3>Booking #{$booking['id']}</h3>";
-            echo "<p>Hotel ID: {$booking['hotel_id']}</p>";
-            echo "<p>Dates: {$booking['check_in']} to {$booking['check_out']}</p>";
-            echo "<p>Guests: {$booking['guests']}</p>";
-            echo "<p>Total: UGX {$booking['total_price']}</p>";
-            echo "<p>Status: {$booking['status']}</p>";
-            echo "<p>Payment: {$booking['payment_status']}</p>";
-            
-            if ($booking['status'] === 'pending') {
-                echo "<form method='POST' action='" . BASE_URL . "/host/approve-booking' style='display:inline;'>";
-                echo "<input type='hidden' name='booking_id' value='{$booking['id']}'>";
-                echo "<button type='submit'>Approve</button>";
-                echo "</form>";
+            } else {
+                $data = [
+                    'title' => 'Subscribe to Premium'
+                ];
                 
-                echo "<form method='POST' action='" . BASE_URL . "/host/reject-booking' style='display:inline;'>";
-                echo "<input type='hidden' name='booking_id' value='{$booking['id']}'>";
-                echo "<button type='submit'>Reject</button>";
-                echo "</form>";
+                echo View::renderWithLayout('host/subscribe', $data);
             }
-            echo "</div>";
+        } catch (Exception $e) {
+            $_SESSION['error'] = $e->getMessage();
+            $_SESSION['old_input'] = $_POST;
+            header('Location: ' . BASE_URL . '/host/subscribe');
+            exit;
         }
     }
     
-    private function renderSubscription($data) {
-        echo "<h1>Subscription</h1>";
-        
-        if ($data['subscription']) {
-            $sub = $data['subscription'];
-            echo "<div>";
-            echo "<h2>Current Subscription</h2>";
-            echo "<p>Plan: {$sub['plan']}</p>";
-            echo "<p>Amount: UGX {$sub['amount']}</p>";
-            echo "<p>Status: {$sub['status']}</p>";
-            echo "<p>Start Date: {$sub['start_date']}</p>";
-            echo "<p>End Date: {$sub['end_date']}</p>";
-            echo "</div>";
-        } else {
-            echo "<p style='color: red;'>No active subscription</p>";
-            echo "<a href='" . BASE_URL . "/host/subscribe'>Subscribe Now</a>";
-        }
-        
-        echo "<div>";
-        echo "<h2>Subscription History</h2>";
-        foreach ($data['history'] as $sub) {
-            echo "<div>";
-            echo "<p>Plan: {$sub['plan']} | Amount: UGX {$sub['amount']} | Status: {$sub['status']}</p>";
-            echo "<p>Period: {$sub['start_date']} to {$sub['end_date']}</p>";
-            echo "</div>";
-        }
-        echo "</div>";
-    }
-    
-    private function renderSubscribeForm($data = []) {
-        echo "<h1>Subscribe</h1>";
-        if (isset($data['error'])) {
-            echo "<p style='color: red;'>{$data['error']}</p>";
-        }
-        
-        echo "<form method='POST'>";
-        echo "<div>";
-        echo "<label>";
-        echo "<input type='radio' name='plan' value='monthly' required>";
-        echo "Monthly - UGX " . number_format(MONTHLY_SUBSCRIPTION_FEE) . "/month";
-        echo "</label>";
-        echo "</div>";
-        
-        echo "<div>";
-        echo "<label>";
-        echo "<input type='radio' name='plan' value='annual' required>";
-        echo "Annual - UGX " . number_format(ANNUAL_SUBSCRIPTION_FEE) . "/year (Save 17%)";
-        echo "</label>";
-        echo "</div>";
-        
-        echo "<button type='submit'>Subscribe</button>";
-        echo "</form>";
-    }
+
     
     public function profile() {
         try {

@@ -20,6 +20,21 @@
             </div>
         </div>
         
+        <!-- Success/Error Messages -->
+        <?php if (isset($_SESSION['success'])): ?>
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle me-2"></i><?= htmlspecialchars($_SESSION['success']) ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        <?php unset($_SESSION['success']); endif; ?>
+        
+        <?php if (isset($_SESSION['error'])): ?>
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-circle me-2"></i><?= htmlspecialchars($_SESSION['error']) ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        <?php unset($_SESSION['error']); endif; ?>
+        
         <!-- Filters -->
         <div class="row mb-4">
             <div class="col-12">
@@ -211,184 +226,159 @@
 </div>
 
 <script>
-$(document).ready(function() {
+// Pure vanilla JavaScript - no jQuery dependency
+document.addEventListener('DOMContentLoaded', function() {
     // Initialize booking management
     initializeBookingManagement();
 });
 
 function initializeBookingManagement() {
     // Filter functionality
-    $('#booking-filters input, #booking-filters select').on('change', function() {
-        filterBookings();
+    const filterInputs = document.querySelectorAll('#booking-filters input, #booking-filters select');
+    filterInputs.forEach(input => {
+        input.addEventListener('change', filterBookings);
     });
-    
-    // Auto-refresh bookings every 30 seconds
-    setInterval(function() {
-        refreshBookings();
-    }, 30000);
+}
+
+function viewBooking(bookingId) {
+    // Navigate to view booking page
+    window.location.href = `<?= BASE_URL ?>/host/view-booking?booking_id=${bookingId}`;
 }
 
 function filterBookings() {
-    const status = $('#status_filter').val();
-    const hotelId = $('#hotel_filter').val();
-    const dateFrom = $('#date_from').val();
-    const dateTo = $('#date_to').val();
+    const status = document.getElementById('status_filter')?.value;
+    const hotelId = document.getElementById('hotel_filter')?.value;
+    const dateFrom = document.getElementById('date_from')?.value;
+    const dateTo = document.getElementById('date_to')?.value;
     
-    $('.booking-row').each(function() {
+    const bookingRows = document.querySelectorAll('.booking-row');
+    bookingRows.forEach(row => {
         let show = true;
         
-        if (status && $(this).data('status') !== status) {
+        if (status && row.getAttribute('data-status') !== status) {
             show = false;
         }
         
         // Add more filter logic here
         
         if (show) {
-            $(this).show();
+            row.style.display = 'table-row';
         } else {
-            $(this).hide();
+            row.style.display = 'none';
         }
     });
-}
-
-function refreshBookings() {
-    $.ajax({
-        url: '/api/host/bookings',
-        method: 'GET',
-        success: function(response) {
-            if (response.success) {
-                updateBookingsTable(response.bookings);
-            }
-        }
-    });
-}
-
-function updateBookingsTable(bookings) {
-    // Update the bookings table with new data
-    // This would be implemented based on the response structure
-}
-
-function viewBooking(bookingId) {
-    $.ajax({
-        url: '/api/host/get-booking',
-        method: 'GET',
-        data: { booking_id: bookingId },
-        success: function(response) {
-            if (response.success) {
-                displayBookingDetails(response.booking);
-                $('#bookingModal').modal('show');
-            } else {
-                showError(response.message || 'Failed to load booking details');
-            }
-        },
-        error: function() {
-            showError('Failed to load booking details. Please try again.');
-        }
-    });
-}
-
-function displayBookingDetails(booking) {
-    const details = `
-        <div class="booking-details">
-            <div class="row">
-                <div class="col-md-6">
-                    <h6>Guest Information</h6>
-                    <p><strong>Name:</strong> ${booking.guest_name}</p>
-                    <p><strong>Email:</strong> ${booking.guest_email}</p>
-                    <p><strong>Phone:</strong> ${booking.guest_phone || 'Not provided'}</p>
-                </div>
-                <div class="col-md-6">
-                    <h6>Booking Information</h6>
-                    <p><strong>Booking ID:</strong> #${booking.id}</p>
-                    <p><strong>Hotel:</strong> ${booking.hotel_name}</p>
-                    <p><strong>Status:</strong> <span class="badge booking-status-${booking.status}">${booking.status}</span></p>
-                </div>
-            </div>
-            <hr>
-            <div class="row">
-                <div class="col-md-6">
-                    <h6>Dates</h6>
-                    <p><strong>Check-in:</strong> ${booking.check_in}</p>
-                    <p><strong>Check-out:</strong> ${booking.check_out}</p>
-                    <p><strong>Guests:</strong> ${booking.guests}</p>
-                </div>
-                <div class="col-md-6">
-                    <h6>Pricing</h6>
-                    <p><strong>Total:</strong> UGX ${booking.total_price.toLocaleString()}</p>
-                    <p><strong>Created:</strong> ${booking.created_at}</p>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    $('#booking-details').html(details);
 }
 
 function approveBooking(bookingId) {
     if (confirm('Are you sure you want to approve this booking?')) {
-        $.ajax({
-            url: '/api/host/approve-booking',
-            method: 'POST',
-            data: { booking_id: bookingId },
-            success: function(response) {
-                if (response.success) {
-                    showSuccess('Booking approved successfully');
-                    location.reload();
-                } else {
-                    showError(response.message || 'Failed to approve booking');
-                }
-            },
-            error: function() {
-                showError('Failed to approve booking. Please try again.');
-            }
-        });
+        // Create and submit a form
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '<?= BASE_URL ?>/host/approve-booking';
+        
+        const bookingIdInput = document.createElement('input');
+        bookingIdInput.type = 'hidden';
+        bookingIdInput.name = 'booking_id';
+        bookingIdInput.value = bookingId;
+        
+        form.appendChild(bookingIdInput);
+        document.body.appendChild(form);
+        form.submit();
     }
 }
 
 function rejectBooking(bookingId) {
     if (confirm('Are you sure you want to reject this booking?')) {
-        $.ajax({
-            url: '/api/host/reject-booking',
-            method: 'POST',
-            data: { booking_id: bookingId },
-            success: function(response) {
-                if (response.success) {
-                    showSuccess('Booking rejected');
-                    location.reload();
-                } else {
-                    showError(response.message || 'Failed to reject booking');
-                }
-            },
-            error: function() {
-                showError('Failed to reject booking. Please try again.');
-            }
-        });
+        // Create and submit a form
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '<?= BASE_URL ?>/host/reject-booking';
+        
+        const bookingIdInput = document.createElement('input');
+        bookingIdInput.type = 'hidden';
+        bookingIdInput.name = 'booking_id';
+        bookingIdInput.value = bookingId;
+        
+        form.appendChild(bookingIdInput);
+        document.body.appendChild(form);
+        form.submit();
     }
 }
 
 function cancelBooking(bookingId) {
     if (confirm('Are you sure you want to cancel this booking?')) {
-        $.ajax({
-            url: '/api/host/cancel-booking',
-            method: 'POST',
-            data: { booking_id: bookingId },
-            success: function(response) {
-                if (response.success) {
-                    showSuccess('Booking cancelled');
-                    location.reload();
-                } else {
-                    showError(response.message || 'Failed to cancel booking');
-                }
-            },
-            error: function() {
-                showError('Failed to cancel booking. Please try again.');
-            }
-        });
+        // Create and submit a form
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '<?= BASE_URL ?>/host/cancel-booking';
+        
+        const bookingIdInput = document.createElement('input');
+        bookingIdInput.type = 'hidden';
+        bookingIdInput.name = 'booking_id';
+        bookingIdInput.value = bookingId;
+        
+        form.appendChild(bookingIdInput);
+        document.body.appendChild(form);
+        form.submit();
     }
 }
 
 function exportBookings() {
     window.open('/api/host/export-bookings', '_blank');
+}
+
+function showSuccess(message) {
+    // Remove existing alerts
+    const existingAlerts = document.querySelectorAll('.alert');
+    existingAlerts.forEach(alert => alert.remove());
+    
+    // Add new success alert
+    const alert = document.createElement('div');
+    alert.className = 'alert alert-success alert-dismissible fade show';
+    alert.role = 'alert';
+    alert.innerHTML = `
+        <i class="fas fa-check-circle me-2"></i>${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    const container = document.querySelector('.container');
+    if (container) {
+        container.insertBefore(alert, container.firstChild);
+    }
+    
+    // Auto-hide after 5 seconds
+    setTimeout(() => {
+        if (alert.parentNode) {
+            alert.remove();
+        }
+    }, 5000);
+}
+
+function showError(message) {
+    // Remove existing alerts
+    const existingAlerts = document.querySelectorAll('.alert');
+    existingAlerts.forEach(alert => alert.remove());
+    
+    // Add new error alert
+    const alert = document.createElement('div');
+    alert.className = 'alert alert-danger alert-dismissible fade show';
+    alert.role = 'alert';
+    alert.innerHTML = `
+        <i class="fas fa-exclamation-circle me-2"></i>${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    const container = document.querySelector('.container');
+    if (container) {
+        container.insertBefore(alert, container.firstChild);
+    }
+    
+    // Auto-hide after 5 seconds
+    setTimeout(() => {
+        if (alert.parentNode) {
+            alert.remove();
+        }
+    }, 5000);
 }
 </script>
 

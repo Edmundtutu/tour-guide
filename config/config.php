@@ -7,7 +7,7 @@ define('DB_PASS', '');
 define('DB_CHARSET', 'utf8mb4');
 
 // Application settings
-define('BASE_URL', 'http://localhost/tour-guide/public');
+define('BASE_URL', 'http://localhost/tour-guide');
 define('APP_NAME', 'Tour Guide');
 
 // Security settings
