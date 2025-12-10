@@ -36,7 +36,9 @@ This platform demonstrates a well-structured PHP MVC application with proper sep
 
 3. **Import database schema:**
    ```bash
+   # Import schema (creates database and tables)
    mysql -u root -p < database/schema.sql
+   # Import demo data
    mysql -u root -p tour_guide < database/demo_data_with_coordinates.sql
    ```
 
